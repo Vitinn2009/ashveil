@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fundo -->
+  <rect width="512" height="512" rx="96" fill="#1B1036"/>
+  <!-- Emblema (logo.svg, escalado para caber no ícone) -->
+  <g transform="translate(97.5 66) scale(1.5833)">
+    <path d="M100 10 L185 40 V120 C185 180 150 215 100 232 C50 215 15 180 15 120 V40 Z"
+          fill="#1B1036" stroke="#F2B705" stroke-width="8" stroke-linejoin="round"/>
+    <rect x="94" y="48" width="12" height="122" fill="#F4E9D8"/>
+    <rect x="68" y="150" width="64" height="10" rx="3" fill="#F2B705"/>
+    <rect x="96" y="160" width="8" height="30" fill="#FF7A1A"/>
+    <circle cx="100" cy="196" r="7" fill="#F2B705"/>
+    <path d="M100 14 C92 30 86 40 100 52 C114 40 108 30 100 14 Z" fill="#FF7A1A"/>
+  </g>
+</svg>

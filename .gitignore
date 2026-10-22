@@ -1,0 +1,19 @@
+# Godot 4
+.godot/
+*.translation
+export_presets.cfg.bak
+
+# Android builds and signing keys (never commit these)
+*.apk
+*.aab
+*.idsig
+*.keystore
+*.jks
+export/*.apk
+export/*.aab
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+  <!-- Escudo -->
+  <path d="M100 10 L185 40 V120 C185 180 150 215 100 232 C50 215 15 180 15 120 V40 Z"
+        fill="#1B1036" stroke="#F2B705" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Lâmina -->
+  <rect x="94" y="48" width="12" height="122" fill="#F4E9D8"/>
+  <!-- Guarda -->
+  <rect x="68" y="150" width="64" height="10" rx="3" fill="#F2B705"/>
+  <!-- Punho -->
+  <rect x="96" y="160" width="8" height="30" fill="#FF7A1A"/>
+  <!-- Pomo -->
+  <circle cx="100" cy="196" r="7" fill="#F2B705"/>
+  <!-- Chama na ponta -->
+  <path d="M100 14 C92 30 86 40 100 52 C114 40 108 30 100 14 Z" fill="#FF7A1A"/>
+</svg>
