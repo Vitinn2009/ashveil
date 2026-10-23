@@ -35,6 +35,19 @@ static func make_box(background: Color, border: Color, border_width := 3, radius
 	return _box(background, border, border_width, radius)
 
 
+## Barra de progresso com fundo escuro e preenchimento colorido. Não usa
+## `modulate`, que também tingiria o texto e os filhos da barra.
+static func make_bar(fill_color: Color, bar_height := 22.0, bar_width := 0.0) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(bar_width, bar_height)
+	var background := _box(Color("2a1f4d"), Color("6a5a9a"), 2, 6)
+	var fill := _box(fill_color, fill_color, 0, 5)
+	bar.add_theme_stylebox_override("background", background)
+	bar.add_theme_stylebox_override("fill", fill)
+	return bar
+
+
 static func make_label(text := "", font_size := 18, color := PARCHMENT) -> Label:
 	var label := Label.new()
 	label.text = text

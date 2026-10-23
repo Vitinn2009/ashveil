@@ -42,7 +42,7 @@ const DATA := {
 	"warrior": {
 		"name": "Guerreiro",
 		"title": "Muralha de aço",
-		"description": "Resistente e corpo a corpo. Quanto mais perto do inimigo, mais dano causa.",
+		"description": "Resistente e corpo a corpo. Golpeia só à frente, na direção em que anda: quanto mais perto do inimigo, mais dano.",
 		"art": "res://assets/characters/warrior.svg",
 		"color": Color("c4ccd8"),
 		"attack": "melee",
@@ -54,7 +54,7 @@ const DATA := {
 		"range": 100.0,
 		"projectile_speed": 0.0,
 		"projectile_color": Color("e8edf5"),
-		"skills": ["shield"],
+		"skills": ["slash", "shield"],
 	},
 }
 

@@ -16,10 +16,11 @@ func _initialize() -> void:
 func _run() -> void:
 	await _test_screens()
 	await _test_enemies()
+	await _test_mission()
 	for hero_id in ["mage", "archer", "warrior"]:
 		await _test_hero(hero_id)
 	# Um erro de script dentro de uma etapa a interrompe em silêncio.
-	_check(_stages_done == 5, "todas as 5 etapas do teste terminaram")
+	_check(_stages_done == 6, "todas as 6 etapas do teste terminaram")
 	print("SMOKE TEST: %s" % ("PASSOU" if _failures == 0 else "FALHOU (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
 
@@ -199,6 +200,47 @@ func _test_enemies() -> void:
 	_stages_done += 1
 
 
+## Missão: barra de progresso, fim do spawn e vitória quando não restar inimigo.
+func _test_mission() -> void:
+	print("[missão]")
+	root.get_node("Session").hero_id = "warrior"
+	_game = load("res://scenes/Game.tscn").instantiate()
+	root.add_child(_game)
+	await _frames(3)
+	var duration: float = _game.MISSION_DURATION
+	_check(_game.spawning and _game.mission_progress() < 0.01, "missão começa com inimigos surgindo e progresso zero")
+	_game.elapsed = duration * 0.5
+	_game._update_hud()
+	_check(is_equal_approx(_game.mission_progress(), 0.5) and is_equal_approx(_game.mission_bar.value, 0.5), "barra da missão acompanha o progresso")
+	_check(_game.mission_status.text.begins_with("Inimigos surgindo"), "barra avisa que ainda surgem inimigos")
+
+	_game.elapsed = duration - 0.1
+	_game._process(0.5)
+	_check(not _game.spawning, "o spawn para quando a missão chega ao fim")
+	_check(is_equal_approx(_game.mission_progress(), 1.0), "progresso chega a 100%")
+	_spawn_enemy(Vector2(900, 0), 100.0)
+	var before: int = _game.enemies_left()
+	_game.spawn_cooldown = 0.0
+	for i in 20:
+		_game._process(0.5)
+	_check(_game.enemies_left() == before, "nenhum inimigo novo surge depois do fim do spawn")
+	_check(not _game.mission_complete, "a missão não termina enquanto restam inimigos")
+	_check(_game.mission_status.text.begins_with("Todos surgiram"), "barra mostra quantos inimigos restam")
+
+	for node in get_nodes_in_group("enemies"):
+		node.free()
+	var gold_before: int = _game.player.inventory.gold
+	_game._process(0.3)
+	_check(not _game.mission_complete, "espera um instante antes de dar a missão por cumprida")
+	_game._process(0.4)
+	_check(_game.mission_complete and _game.victory_panel.visible and paused, "missão cumprida quando o último inimigo morre")
+	_check(_game.player.inventory.gold == gold_before + _game.MISSION_REWARD, "missão cumprida dá bônus de ouro")
+	_game.queue_free()
+	paused = false
+	await _frames(2)
+	_stages_done += 1
+
+
 func _spawn_enemy(offset: Vector2, health := 30.0) -> Enemy:
 	var enemy := Enemy.new()
 	enemy.max_health = health
@@ -223,8 +265,10 @@ func _test_hero(hero_id: String) -> void:
 	_check(_game.skill_buttons.size() == hero["skills"].size(), "barra de habilidades com %d botões" % hero["skills"].size())
 	_check(_game.inventory_panel.visible, "inventário visível na direita")
 
+	_test_hud_bars()
 	_test_combat(hero)
-	_test_skills(hero_id)
+	await _test_skills(hero_id)
+	_test_skill_attributes(hero_id)
 	await _test_inventory_and_stats()
 	await _test_levels()
 
@@ -249,17 +293,45 @@ func _test_combat(hero: Dictionary) -> void:
 	enemy.free()
 
 	if hero["attack"] == "melee":
+		var player: Player = _game.player
+		player.facing = Vector2.RIGHT
 		var near := _spawn_enemy(Vector2(10, 0), 1000.0)
-		var far := _spawn_enemy(Vector2(0, 90), 1000.0)
+		var far := _spawn_enemy(Vector2(85, 0), 1000.0)
 		_game.weapon._cooldown = 0.0
 		_game.weapon._process(0.0)
 		_check(near.max_health - near.health > far.max_health - far.health, "guerreiro causa mais dano quanto mais perto")
 		near.free()
 		far.free()
 
+		# O golpe é em leque: só atinge o que está à frente, na direção do movimento.
+		var front := _spawn_enemy(Vector2(70, 0), 1000.0)
+		var behind := _spawn_enemy(Vector2(-70, 0), 1000.0)
+		var side := _spawn_enemy(Vector2(0, 70), 1000.0)
+		_game.weapon._cooldown = 0.0
+		_game.weapon._process(0.0)
+		_check(front.health < front.max_health, "golpe atinge o inimigo à frente")
+		_check(behind.health == behind.max_health, "golpe não atinge o inimigo atrás")
+		_check(side.health == side.max_health, "golpe não atinge o inimigo ao lado")
+		player.facing = Vector2.LEFT
+		_game.weapon._cooldown = 0.0
+		_game.weapon._process(0.0)
+		_check(behind.health < behind.max_health, "ao virar, o golpe passa a atingir o novo lado")
+		_check(_count_nodes_of(SlashEffect) > 0, "golpe mostra o efeito de corte em leque")
+		player.facing = Vector2.RIGHT
+		# Sem inimigo à frente, o herói não golpeia.
+		_game.weapon._cooldown = 0.0
+		var health_snapshot := behind.health
+		front.free()
+		behind.global_position = player.global_position + Vector2(-70, 0)
+		_game.weapon._process(0.0)
+		_check(behind.health == health_snapshot, "não golpeia quando só há inimigo atrás")
+		behind.free()
+		side.free()
+
 
 func _test_skills(hero_id: String) -> void:
 	var player: Player = _game.player
+	player.facing = Vector2.RIGHT
 	var mage_target: Enemy = _spawn_enemy(Vector2(50, 0), 1000.0) if hero_id == "mage" else null
 	for id in Heroes.get_hero(hero_id)["skills"]:
 		_check(_game.try_cast(id), "habilidade %s dispara" % id)
@@ -297,6 +369,43 @@ func _test_skills(hero_id: String) -> void:
 			var health_before := player.health
 			player.take_damage(10.0)
 			_check(is_equal_approx(player.health, health_before), "escudo absorve o dano")
+			await _test_double_slash()
+
+
+func _waves() -> Array:
+	var waves: Array = []
+	for node in _game.world.get_children():
+		if node is Projectile and node.style == "slash":
+			waves.append(node)
+	return waves
+
+
+## Corte Duplo: duas ondas de espada à frente, cada uma com o dobro do dano.
+func _test_double_slash() -> void:
+	var player: Player = _game.player
+	_check(Heroes.get_hero("warrior")["skills"].has("slash"), "guerreiro tem a habilidade Corte Duplo")
+	var waves := _waves()
+	_check(waves.size() == 1, "primeiro corte sai na hora")
+	var expected: float = _game.weapon.damage * 2.0 * player.get_damage_mult() * player.skill_power_mult()
+	_check(waves.size() == 1 and is_equal_approx(waves[0].damage, expected), "corte causa dano x2")
+	_check(waves.size() == 1 and waves[0].velocity.normalized().is_equal_approx(Vector2.RIGHT), "corte vai na direção em que o herói anda")
+	await create_timer(Skills.SLASH_GAP + 0.15).timeout
+	_check(_waves().size() == 2, "segundo corte sai logo depois")
+	# Uma onda atravessa vários inimigos em linha.
+	for wave in _waves():
+		wave.free()
+	var first := _spawn_enemy(Vector2(70, 0), 1000.0)
+	var second := _spawn_enemy(Vector2(110, 0), 1000.0)
+	Skills.cast("slash", _game)
+	var wave: Projectile = _waves()[0]
+	for i in 8:
+		wave._physics_process(0.03)
+	_check(first.health < first.max_health and second.health < second.max_health, "corte atravessa inimigos em linha")
+	_check(first.max_health - first.health >= expected - 0.01, "inimigo recebe o dano dobrado do corte")
+	first.free()
+	second.free()
+	for node in _waves():
+		node.free()
 
 
 func _count_projectiles() -> int:
@@ -305,6 +414,61 @@ func _count_projectiles() -> int:
 		if node is Projectile:
 			total += 1
 	return total
+
+
+func _test_hud_bars() -> void:
+	var hp_bar: ProgressBar = _game.hp_bar
+	var xp_bar: ProgressBar = _game.xp_bar
+	_check(hp_bar.modulate == Color.WHITE and xp_bar.modulate == Color.WHITE, "barras do HUD não tingem o texto")
+	_check(hp_bar.get_theme_stylebox("fill") is StyleBoxFlat and hp_bar.get_theme_stylebox("background") is StyleBoxFlat, "barras do HUD têm fundo e preenchimento próprios")
+	var expected_text := "%d / %d" % [int(ceil(_game.player.health)), int(_game.player.max_health)]
+	_check(_game.hp_text.text == expected_text and _game.hp_text.modulate == Color.WHITE, "barra de vida mostra vida atual e máxima, legível")
+	_check(_game.mission_bar.max_value == 1.0, "barra da missão existe")
+
+
+## Atributos de habilidade: alcance, x2, recarga e poder, com limite por atributo.
+func _test_skill_attributes(hero_id: String) -> void:
+	var player: Player = _game.player
+	_check(is_equal_approx(player.skill_cooldown_mult(), 1.0) and is_equal_approx(player.skill_power_mult(), 1.0)
+		and is_equal_approx(player.skill_range_mult(), 1.0) and player.skill_echo_chance() == 0.0, "atributos de habilidade começam zerados")
+	var first_skill: String = Heroes.get_hero(hero_id)["skills"][0]
+	var cooldown_before := Skills.cooldown_for(first_skill, _game)
+	_check(player.add_point("skill", "cooldown"), "ponto de Recarga é aceito")
+	_check(Skills.cooldown_for(first_skill, _game) < cooldown_before, "Recarga reduz o tempo de recarga")
+	for stat in ["power", "range", "echo"]:
+		player.add_point("skill", stat)
+	_check(player.skill_power_mult() > 1.0 and player.skill_range_mult() > 1.0 and player.skill_echo_chance() > 0.0, "Poder, Alcance e x2 aumentam")
+	for i in 10:
+		player.add_point("skill", "power")
+	_check(player.get_points("skill", "power") == Player.MAX_SKILL_POINTS, "atributo de habilidade para no limite")
+	_check(not player.can_add_point("skill", "power") and not player.add_point("skill", "power"), "não aceita ponto além do limite")
+
+	match hero_id:
+		"mage":
+			Skills.cast("freeze", _game)
+			var zone: SkillZone
+			for node in _game.world.get_children():
+				if node is SkillZone:
+					zone = node
+			_check(is_equal_approx(zone.radius, 170.0 * player.skill_range_mult()), "Alcance aumenta a área do Gelo")
+			_check(is_equal_approx(zone.duration, 5.0 * player.skill_power_mult()), "Poder aumenta a duração do Gelo")
+			_check(zone.slow_factor < 0.4, "Poder deixa o Gelo mais forte")
+		"archer":
+			player.double_time = 0.0
+			Skills.cast("double", _game, false)
+			var single := player.double_time
+			Skills.cast("double", _game, true)
+			_check(is_equal_approx(single, 6.0 * player.skill_power_mult()), "Poder aumenta a duração da Flecha Dupla")
+			_check(player.double_time > single * 1.9, "x2 repete a habilidade e soma a duração")
+		"warrior":
+			Skills.cast("slash", _game)
+			var wave: Projectile = _waves().back()
+			_check(wave.damage > _game.weapon.damage * 2.0 * player.get_damage_mult(), "Poder aumenta o dano do Corte Duplo")
+			_check(wave.lifetime > 270.0 / 520.0, "Alcance aumenta a distância do Corte Duplo")
+			for node in _waves():
+				node.free()
+	for stat in player.skill_attributes:
+		player.skill_attributes[stat] = 0
 
 
 func _test_inventory_and_stats() -> void:
@@ -348,6 +512,22 @@ func _test_inventory_and_stats() -> void:
 	player.add_attribute("speed")
 	_check(player.get_move_speed() > speed_before, "Rapidez aumenta o movimento")
 
+	# Limites: por atributo (10 pontos) e no total com equipamentos (20).
+	for i in 20:
+		player.add_attribute("defense")
+	_check(player.attributes["defense"] == Player.MAX_ATTRIBUTE_POINTS, "atributo para no limite de pontos")
+	_check(not player.add_attribute("defense"), "ponto além do limite é recusado")
+	inventory.bag.clear()
+	var ring := Item.new()
+	ring.item_name = "Anel Absurdo"
+	ring.slot = "ring"
+	ring.stats = {"defense": 15}
+	inventory.add_item(ring)
+	inventory.equip(ring)
+	_check(player.stat_points("defense") == Player.MAX_TOTAL_POINTS, "atributo mais equipamento respeita o limite total")
+	inventory.unequip("ring")
+	player.attributes["defense"] = 0
+
 
 func _test_levels() -> void:
 	_game.level = 4
@@ -371,7 +551,11 @@ func _test_levels() -> void:
 		_check(not offered_ranged, "guerreiro não recebe cartas de projétil")
 	_game._choose_upgrade(_game.upgrades[0])
 	_check(_game.stat_popup.visible, "no nível 5 abre o popup de atributos")
-	_check(_game.stat_popup.points_left == 3, "popup dá 3 pontos")
+	_check(_game.stat_popup.group == "hero" and _game.stat_popup.points_left == 3, "popup dá 3 pontos de atributo do herói")
+	await _frames(3)
+	var panel: Control = _game.stat_popup.get_child(1).get_child(0)
+	var popup_center: Vector2 = _game.stat_popup.get_global_rect().get_center()
+	_check(panel.size.x > 300.0 and panel.get_global_rect().get_center().distance_to(popup_center) < 4.0, "popup de atributos fica centralizado")
 	_game.stat_popup.confirm()
 	_check(_game.stat_popup.visible, "não fecha enquanto sobram pontos")
 	for stat in ["attack", "attack", "luck"]:
@@ -379,3 +563,64 @@ func _test_levels() -> void:
 	_check(_game.player.attributes["attack"] == 2, "pontos de ataque aplicados")
 	_game.stat_popup.confirm()
 	_check(not _game.stat_popup.visible and not paused, "confirmar fecha o popup e retoma o jogo")
+	_check(_game.pending_skill_popups == 0, "nível 5 não abre atributos de habilidade")
+
+	# Com todos os atributos no limite, o popup deixa fechar mesmo sobrando pontos.
+	for stat in _game.player.attributes:
+		_game.player.attributes[stat] = Player.MAX_ATTRIBUTE_POINTS
+	_game.stat_popup.open(_game.player, 3, 5, "hero")
+	_check(_game.stat_popup._add_buttons["hp"].disabled, "botão + fica desativado no limite")
+	_game.stat_popup.confirm()
+	_check(not _game.stat_popup.visible, "pontos que não cabem em nenhum atributo são perdidos")
+	for stat in _game.player.attributes:
+		_game.player.attributes[stat] = 0
+	paused = false
+	_game.modal_open = false
+
+	# Cada carta de melhoria tem limite de repetições.
+	_game.card_counts["Lâmina afiada"] = _game.CARD_MAX_STACK
+	var offered_capped := false
+	for i in 14:
+		_game.modal_open = false
+		_game.pending_level_ups = 1
+		_game._open_level_up()
+		await _frames(2)
+		for button in _game.cards_box.get_children():
+			if button is Button and button.text.begins_with("Lâmina afiada"):
+				offered_capped = true
+	_check(not offered_capped, "carta no limite de repetições não é mais oferecida")
+	_game.card_counts.clear()
+	_game.level_panel.hide()
+	_game.modal_open = false
+	paused = false
+
+	# A cada 10 níveis: atributos do herói e, depois, os das habilidades.
+	_game.level = 9
+	_game.xp = 0.0
+	_game.xp_to_next = 1.0
+	_game.pending_level_ups = 0
+	_game.pending_stat_popups = 0
+	_game.pending_skill_popups = 0
+	root.get_node("EventBus").pickup_collected.emit("xp", 5)
+	_check(_game.level == 10, "nível 10 alcançado")
+	_game._choose_upgrade(_game.upgrades[0])
+	_check(_game.stat_popup.visible and _game.stat_popup.group == "hero", "nível 10 abre primeiro os atributos do herói")
+	for stat in ["hp", "attack", "speed"]:
+		_game.stat_popup.add_point(stat)
+	_game.stat_popup.confirm()
+	_check(_game.stat_popup.visible and _game.stat_popup.group == "skill", "em seguida abre os atributos das habilidades")
+	_check(_game.stat_popup.points_left == 4, "popup das habilidades dá 4 pontos")
+	var skill_ids: Array = []
+	for stat in _game.stat_popup.stats():
+		skill_ids.append(stat["id"])
+	_check(skill_ids == ["range", "echo", "cooldown", "power"], "atributos das habilidades: alcance, x2, recarga e poder")
+	for stat in skill_ids:
+		_game.stat_popup.add_point(stat)
+	var all_one := true
+	for stat in skill_ids:
+		all_one = all_one and _game.player.skill_attributes[stat] == 1
+	_check(all_one, "pontos de habilidade aplicados")
+	_game.stat_popup.confirm()
+	_check(not _game.stat_popup.visible and not paused, "confirmar fecha o popup das habilidades")
+	for stat in _game.player.skill_attributes:
+		_game.player.skill_attributes[stat] = 0

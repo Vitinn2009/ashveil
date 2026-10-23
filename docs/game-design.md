@@ -3,23 +3,26 @@
 ## Loop de partida (5 a 12 minutos)
 
 - O herói ataca sozinho. O jogador controla o movimento e dispara as habilidades.
-- Inimigos chegam em hordas que aumentam com o tempo, com três tipos (comum, veloz e brutamontes).
+- Cada partida é uma **missão** (hoje, "Floresta Sombria"). Os inimigos surgem por 4 minutos e uma barra de progresso no topo mostra quanto falta. Quando o tempo acaba, o spawn para, a barra muda para "restam N inimigos" e a missão termina quando o último morrer, com bônus de 50 de ouro.
+- Os inimigos chegam em hordas que aumentam com o tempo, com 5 tipos diferentes.
 - Ao morrer, o inimigo solta XP e, com sorte, ouro, poção ou equipamento.
-- Ao subir de nível, o jogador escolhe 1 de 3 melhorias.
-- A cada 5 níveis abre um popup para distribuir 3 pontos de atributo.
+- Ao subir de nível, o jogador escolhe 1 de 3 melhorias. Cada carta pode ser escolhida no máximo 5 vezes.
+- A cada 5 níveis abre um popup para distribuir 3 pontos de atributo do herói.
+- A cada 10 níveis abre, depois dele, um popup com 4 pontos de atributo das habilidades.
 - Chefe ao fim de cada bioma (a fazer no M4).
 
 ## Heróis
 
 | | Mago | Arqueiro | Guerreiro |
 |---|---|---|---|
-| Ataque | Magia à distância | Flechas que atravessam 1 inimigo | Golpe em área corpo a corpo |
+| Ataque | Magia à distância | Flechas que atravessam 1 inimigo | Golpe em leque à frente |
 | Vida base | 70 | 95 | 150 |
 | Defesa base | 0 | 2 | 6 |
 | Velocidade | 200 | 235 | 215 |
-| Habilidades | Gelo, Fogo, Vento | Flecha Dupla, Velocidade | Escudo |
+| Habilidades | Gelo, Fogo, Vento | Flecha Dupla, Velocidade | Corte Duplo, Escudo |
 
-- **Guerreiro:** quanto menor a distância do inimigo, maior o dano. O golpe vai de 0,6x na borda do alcance até 2,2x colado no inimigo.
+- **Guerreiro:** golpeia só à frente, num leque de 110 graus na direção em que está andando (a última direção do joystick). Não ataca o que está atrás ou do lado. Quanto menor a distância do inimigo, maior o dano: o golpe vai de 0,6x na borda do alcance até 2,2x colado no inimigo.
+- **Corte Duplo (Guerreiro):** dois cortes de espada no ar, um logo depois do outro (0,18s), à frente. Cada corte causa o dobro do dano de ataque e atravessa todos os inimigos no caminho. Recarga de 8s.
 - **Gelo (Mago):** congela o chão por 5s e deixa os inimigos 60% mais lentos.
 - **Fogo (Mago):** bola de fogo que queima o inimigo 3 vezes, uma por segundo, com dano de 8 x o multiplicador de ataque por queimadura.
 - **Vento (Mago):** empurra os inimigos próximos e causa um pouco de dano.
@@ -28,6 +31,15 @@
 - **Escudo (Guerreiro):** absorve dano por 6s (50 + 3x defesa).
 
 Teclas no computador: 1, 2 e 3 para as habilidades, Q para a poção.
+
+### Atributos das habilidades (popup a cada 10 níveis, 4 pontos, máx. 5 por atributo)
+
+| Atributo | Efeito por ponto |
+|---|---|
+| Alcance | +10% de alcance e área das habilidades |
+| x2 | +10% de chance de usar a habilidade duas vezes (a repetição vem 0,35s depois; nas que duram, soma a duração) |
+| Recarga | -5% no tempo de recarga (soma com a carta Foco) |
+| Poder | +12% de dano e efeito: dano, queimadura, empurrão, duração e absorção do escudo, e Gelo mais forte |
 
 ## Inimigos
 
@@ -55,7 +67,12 @@ A cena `scenes/Bestiary.tscn` mostra os cinco lado a lado, para conferir o visua
 | Rapidez | +3% de movimento e +3% de velocidade de ataque |
 | Sorte | +8% de XP ganho, +10% de chance de drop, mais ouro e chance de drop duplo |
 
-O popup só fecha quando todos os pontos forem gastos. Equipamentos somam pontos nesses mesmos atributos.
+**Limites, para equilibrar o jogo:**
+- No máximo **10 pontos** gastos em cada atributo (o popup mostra "3/10").
+- No máximo **20 pontos** no total de um atributo, somando equipamentos.
+- Se todos os atributos estiverem no limite, os pontos que sobrarem são perdidos e o popup deixa fechar.
+
+O popup só fecha quando todos os pontos forem gastos (ou quando nenhum atributo aceitar mais). Equipamentos somam pontos nesses mesmos atributos.
 
 ## Inventário (painel à direita)
 

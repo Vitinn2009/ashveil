@@ -51,7 +51,7 @@ func _ready() -> void:
 	play.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
 	column.add_child(play)
 
-	var version := _make_title("Protótipo v0.3", 14, Brand.MOSS.lightened(0.4))
+	var version := _make_title("Protótipo v0.4", 14, Brand.MOSS.lightened(0.4))
 	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -200.0
 	version.offset_top = -30.0

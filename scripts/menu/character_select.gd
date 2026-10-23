@@ -132,14 +132,11 @@ func _make_stat_row(label_text: String, ratio: float, color: Color) -> HBoxConta
 	var label := Brand.make_label(label_text, 14)
 	label.custom_minimum_size = Vector2(56, 0)
 	row.add_child(label)
-	var bar := ProgressBar.new()
-	bar.show_percentage = false
+	var bar := Brand.make_bar(color, 14.0)
 	bar.max_value = 1.0
 	bar.value = clampf(ratio, 0.05, 1.0)
-	bar.custom_minimum_size = Vector2(0, 14)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.modulate = color
 	row.add_child(bar)
 	return row
 

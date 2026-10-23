@@ -12,12 +12,24 @@ const XP_PER_LUCK := 0.08
 const DROP_PER_LUCK := 0.10
 const SPRITE_SCALE := 0.52
 const SPRITE_BASE_Y := -24.0
+## Limite de pontos gastos em cada atributo do herói.
+const MAX_ATTRIBUTE_POINTS := 10
+## Limite do total de um atributo, somando equipamentos.
+const MAX_TOTAL_POINTS := 20
+## Limite de pontos em cada atributo de habilidade.
+const MAX_SKILL_POINTS := 5
+const SKILL_RANGE_PER_POINT := 0.10
+const SKILL_ECHO_PER_POINT := 0.10
+const SKILL_COOLDOWN_PER_POINT := 0.05
+const SKILL_POWER_PER_POINT := 0.12
 
 var hero_id := "warrior"
 var hero: Dictionary
 var inventory := Inventory.new()
 ## Pontos distribuídos no popup de status (a cada 5 níveis).
 var attributes := {"hp": 0, "defense": 0, "attack": 0, "speed": 0, "luck": 0}
+## Pontos distribuídos a cada 10 níveis: alcance, x2 (eco), recarga e poder das habilidades.
+var skill_attributes := {"range": 0, "echo": 0, "cooldown": 0, "power": 0}
 var card_health := 0.0
 var card_speed_mult := 1.0
 var pickup_radius := 80.0
@@ -50,7 +62,44 @@ func _ready() -> void:
 
 
 func stat_points(stat: String) -> int:
-	return int(attributes[stat]) + inventory.bonus(stat)
+	return mini(int(attributes[stat]) + inventory.bonus(stat), MAX_TOTAL_POINTS)
+
+
+func get_points(group: String, stat: String) -> int:
+	var source: Dictionary = skill_attributes if group == "skill" else attributes
+	return int(source[stat])
+
+
+func can_add_point(group: String, stat: String) -> bool:
+	var cap := MAX_SKILL_POINTS if group == "skill" else MAX_ATTRIBUTE_POINTS
+	return get_points(group, stat) < cap
+
+
+func add_point(group: String, stat: String) -> bool:
+	if not can_add_point(group, stat):
+		return false
+	if group == "skill":
+		skill_attributes[stat] = int(skill_attributes[stat]) + 1
+	else:
+		attributes[stat] = int(attributes[stat]) + 1
+	refresh_stats()
+	return true
+
+
+func skill_range_mult() -> float:
+	return 1.0 + int(skill_attributes["range"]) * SKILL_RANGE_PER_POINT
+
+
+func skill_echo_chance() -> float:
+	return int(skill_attributes["echo"]) * SKILL_ECHO_PER_POINT
+
+
+func skill_cooldown_mult() -> float:
+	return 1.0 - int(skill_attributes["cooldown"]) * SKILL_COOLDOWN_PER_POINT
+
+
+func skill_power_mult() -> float:
+	return 1.0 + int(skill_attributes["power"]) * SKILL_POWER_PER_POINT
 
 
 func get_max_health() -> float:
@@ -97,9 +146,8 @@ func refresh_stats() -> void:
 	health_changed.emit(health, max_health)
 
 
-func add_attribute(stat: String) -> void:
-	attributes[stat] = int(attributes[stat]) + 1
-	refresh_stats()
+func add_attribute(stat: String) -> bool:
+	return add_point("hero", stat)
 
 
 func _physics_process(delta: float) -> void:

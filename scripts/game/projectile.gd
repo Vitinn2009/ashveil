@@ -40,6 +40,12 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	match style:
+		"slash":
+			# Meia-lua de espada: arco largo voltado para a frente.
+			var center := Vector2(-radius * 0.45, 0)
+			draw_arc(center, radius, -1.05, 1.05, 24, Color(color, 0.28), radius * 0.55)
+			draw_arc(center, radius, -1.05, 1.05, 24, Color(color, 0.95), 5.0)
+			draw_arc(center, radius * 0.82, -0.85, 0.85, 20, Color(color, 0.55), 3.0)
 		"arrow":
 			draw_line(Vector2(-16, 0), Vector2(6, 0), Brand.NIGHT, 5.0)
 			draw_line(Vector2(-16, 0), Vector2(6, 0), Color("c9a06a"), 2.5)

@@ -7,6 +7,19 @@ const MAX_ENEMIES := 280
 const MENU_SCENE := "res://scenes/Main.tscn"
 const STAT_POINTS_PER_POPUP := 3
 const STAT_POPUP_EVERY := 5
+const SKILL_POINTS_PER_POPUP := 4
+const SKILL_POPUP_EVERY := 10
+## A missão dura MISSION_DURATION segundos de inimigos surgindo. Depois disso o
+## spawn para e a missão termina quando o último inimigo morrer.
+const MISSION_NAME := "Floresta Sombria"
+const MISSION_DURATION := 240.0
+const MISSION_REWARD := 50
+const MISSION_CLEAR_DELAY := 0.6
+## Largura da barra da missão. Com as barras de vida e XP de 260 px à esquerda e
+## o inventário de 270 px à direita, ela cabe sem encostar em nada a partir de 1280 px.
+const MISSION_BAR_WIDTH := 400.0
+## Cada carta de melhoria pode ser escolhida no máximo esta quantidade de vezes.
+const CARD_MAX_STACK := 5
 const GOLD_CHANCE := 0.30
 const POTION_CHANCE := 0.035
 const ITEM_CHANCE := 0.04
@@ -24,6 +37,11 @@ var level_panel: PanelContainer
 var cards_box: VBoxContainer
 var gameover_panel: PanelContainer
 var gameover_label: Label
+var victory_panel: PanelContainer
+var victory_label: Label
+var mission_bar: ProgressBar
+var mission_label: Label
+var mission_status: Label
 var inventory_panel: InventoryPanel
 var stat_popup: StatPopup
 var skill_buttons := {}
@@ -38,9 +56,15 @@ var xp_to_next := 6.0
 var spawn_cooldown := 0.0
 var pending_level_ups := 0
 var pending_stat_popups := 0
+var pending_skill_popups := 0
 var modal_open := false
 var game_over := false
+var spawning := true
+var mission_complete := false
+var _clear_time := 0.0
+var _mission_bar_recolored := false
 var upgrades: Array = []
+var card_counts := {}
 var _toast_tween: Tween
 
 
@@ -78,14 +102,52 @@ func _process(delta: float) -> void:
 	if game_over:
 		return
 	elapsed += delta
-	spawn_cooldown -= delta
-	if spawn_cooldown <= 0.0:
-		spawn_cooldown = max(0.2, 1.15 - elapsed / 160.0)
-		_spawn_enemy()
+	if spawning and elapsed >= MISSION_DURATION:
+		spawning = false
+		_toast("Chegaram todos! Elimine os inimigos restantes", Brand.GOLD)
+	if spawning:
+		spawn_cooldown -= delta
+		if spawn_cooldown <= 0.0:
+			spawn_cooldown = max(0.2, 1.15 - elapsed / 160.0)
+			_spawn_enemy()
+	else:
+		_check_mission_end(delta)
 	for id in cooldowns:
 		cooldowns[id] = max(0.0, cooldowns[id] - delta)
-		skill_buttons[id].set_cooldown(cooldowns[id], Skills.def(id)["cooldown"] * cooldown_scale)
+		skill_buttons[id].set_cooldown(cooldowns[id], Skills.cooldown_for(id, self))
 	_update_hud()
+
+
+## Progresso da missão, de 0 a 1, pelo tempo de spawn.
+func mission_progress() -> float:
+	return clampf(elapsed / MISSION_DURATION, 0.0, 1.0)
+
+
+func enemies_left() -> int:
+	return get_tree().get_node_count_in_group("enemies")
+
+
+## Depois que o spawn para, a missão acaba quando não restar nenhum inimigo.
+## A espera curta evita contar o instante em que uma gosma acabou de se dividir.
+func _check_mission_end(delta: float) -> void:
+	if enemies_left() > 0:
+		_clear_time = 0.0
+		return
+	_clear_time += delta
+	if _clear_time >= MISSION_CLEAR_DELAY:
+		_on_mission_complete()
+
+
+func _on_mission_complete() -> void:
+	mission_complete = true
+	game_over = true
+	player.inventory.add_gold(MISSION_REWARD)
+	level_panel.hide()
+	stat_popup.hide()
+	victory_label.text = "Missão cumprida!\n%s\nTempo: %s\nAbates: %d\nNível: %d\nOuro: %d (bônus de %d)" % [
+		MISSION_NAME, _format_time(), kills, level, player.inventory.gold, MISSION_REWARD]
+	victory_panel.show()
+	get_tree().paused = true
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -111,8 +173,8 @@ func _try_cast_index(skills: Array, index: int) -> void:
 func try_cast(id: String) -> bool:
 	if game_over or modal_open or cooldowns.get(id, 0.0) > 0.0:
 		return false
-	cooldowns[id] = Skills.def(id)["cooldown"] * cooldown_scale
-	Skills.cast(id, self)
+	cooldowns[id] = Skills.cooldown_for(id, self)
+	Skills.activate(id, self)
 	return true
 
 
@@ -188,10 +250,15 @@ func _gain_xp(amount: float) -> void:
 		pending_level_ups += 1
 		if level % STAT_POPUP_EVERY == 0:
 			pending_stat_popups += 1
+		if level % SKILL_POPUP_EVERY == 0:
+			pending_skill_popups += 1
 	xp_bar.max_value = xp_to_next
+	_update_hud()
 	_open_next_modal()
 
 
+## Ordem: cartas de melhoria, atributos do herói (a cada 5 níveis) e
+## atributos das habilidades (a cada 10 níveis).
 func _open_next_modal() -> void:
 	if modal_open or game_over:
 		return
@@ -199,6 +266,8 @@ func _open_next_modal() -> void:
 		_open_level_up()
 	elif pending_stat_popups > 0:
 		_open_stat_popup()
+	elif pending_skill_popups > 0:
+		_open_skill_popup()
 
 
 func _open_level_up() -> void:
@@ -207,7 +276,8 @@ func _open_level_up() -> void:
 	for child in cards_box.get_children():
 		child.queue_free()
 	var pool := upgrades.filter(func(option: Dictionary) -> bool:
-		return option["kinds"].is_empty() or option["kinds"].has(weapon.kind))
+		var allowed: bool = option["kinds"].is_empty() or option["kinds"].has(weapon.kind)
+		return allowed and card_counts.get(option["name"], 0) < CARD_MAX_STACK)
 	pool.shuffle()
 	for option in pool.slice(0, 3):
 		var button := Brand.make_button("%s\n%s" % [option["name"], option["desc"]], Vector2(460, 84))
@@ -219,6 +289,7 @@ func _open_level_up() -> void:
 
 func _choose_upgrade(option: Dictionary) -> void:
 	option["apply"].call()
+	card_counts[option["name"]] = card_counts.get(option["name"], 0) + 1
 	level_panel.hide()
 	_close_modal()
 
@@ -227,7 +298,14 @@ func _open_stat_popup() -> void:
 	pending_stat_popups -= 1
 	modal_open = true
 	# O nível exibido é o do marco de 5 em 5 mais recente já alcançado.
-	stat_popup.open(player, STAT_POINTS_PER_POPUP, level - level % STAT_POPUP_EVERY)
+	stat_popup.open(player, STAT_POINTS_PER_POPUP, level - level % STAT_POPUP_EVERY, "hero")
+	get_tree().paused = true
+
+
+func _open_skill_popup() -> void:
+	pending_skill_popups -= 1
+	modal_open = true
+	stat_popup.open(player, SKILL_POINTS_PER_POPUP, level - level % SKILL_POPUP_EVERY, "skill")
 	get_tree().paused = true
 
 
@@ -266,8 +344,8 @@ func _on_player_died() -> void:
 	game_over = true
 	level_panel.hide()
 	stat_popup.hide()
-	gameover_label.text = "%s caiu na Floresta Sombria\nTempo: %s\nAbates: %d\nNível: %d\nOuro: %d" % [
-		player.hero["name"], _format_time(), kills, level, player.inventory.gold]
+	gameover_label.text = "%s caiu em %s\nTempo: %s\nAbates: %d\nNível: %d\nOuro: %d" % [
+		player.hero["name"], MISSION_NAME, _format_time(), kills, level, player.inventory.gold]
 	gameover_panel.show()
 	get_tree().paused = true
 
@@ -286,9 +364,9 @@ func _build_hud() -> void:
 	top.position = Vector2(16, 16)
 	top.add_theme_constant_override("separation", 6)
 	hud.add_child(top)
-	hp_bar = _make_bar(Brand.EMBER)
+	hp_bar = Brand.make_bar(Color("d8452e"), 22.0, 260.0)
 	hp_text = _bar_label(hp_bar)
-	xp_bar = _make_bar(Brand.GOLD)
+	xp_bar = Brand.make_bar(Brand.GOLD, 14.0, 260.0)
 	top.add_child(hp_bar)
 	top.add_child(xp_bar)
 	info_label = Brand.make_label("", 20)
@@ -296,11 +374,30 @@ func _build_hud() -> void:
 	info_label.add_theme_constant_override("outline_size", 5)
 	top.add_child(info_label)
 
+	# Barra da missão, no centro da área livre (à esquerda do inventário).
+	var mission := VBoxContainer.new()
+	mission.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	mission.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	mission.offset_left = -MISSION_BAR_WIDTH * 0.5 - InventoryPanel.WIDTH * 0.5
+	mission.offset_right = MISSION_BAR_WIDTH * 0.5 - InventoryPanel.WIDTH * 0.5
+	mission.offset_top = 12.0
+	mission.add_theme_constant_override("separation", 3)
+	hud.add_child(mission)
+	mission_label = Brand.make_label("Missão: %s" % MISSION_NAME, 18, Brand.GOLD)
+	mission_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mission_label.add_theme_color_override("font_outline_color", Brand.NIGHT)
+	mission_label.add_theme_constant_override("outline_size", 5)
+	mission.add_child(mission_label)
+	mission_bar = Brand.make_bar(Color("5fae6e"), 22.0, MISSION_BAR_WIDTH)
+	mission_bar.max_value = 1.0
+	mission_status = _bar_label(mission_bar)
+	mission.add_child(mission_bar)
+
 	toast_label = Brand.make_label("", 24, Brand.GOLD)
 	toast_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toast_label.offset_left = -300.0
 	toast_label.offset_right = 300.0 - InventoryPanel.WIDTH
-	toast_label.offset_top = 22.0
+	toast_label.offset_top = 84.0
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_label.add_theme_color_override("font_outline_color", Brand.NIGHT)
 	toast_label.add_theme_constant_override("outline_size", 6)
@@ -343,21 +440,29 @@ func _build_hud() -> void:
 	hud.add_child(stat_popup)
 
 	gameover_panel = _make_centered_panel(hud)
-	var over_box := VBoxContainer.new()
-	over_box.add_theme_constant_override("separation", 16)
-	gameover_panel.add_child(over_box)
-	gameover_label = Brand.make_label("", 22)
-	over_box.add_child(gameover_label)
+	gameover_label = _fill_end_panel(gameover_panel)
+	victory_panel = _make_centered_panel(hud)
+	victory_label = _fill_end_panel(victory_panel)
+
+
+## Texto de resultado e botões "Jogar novamente" e "Voltar ao menu".
+func _fill_end_panel(panel: PanelContainer) -> Label:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	panel.add_child(box)
+	var label := Brand.make_label("", 22)
+	box.add_child(label)
 	var again := Brand.make_button("Jogar novamente")
 	again.pressed.connect(func() -> void:
 		get_tree().paused = false
 		get_tree().reload_current_scene())
-	over_box.add_child(again)
+	box.add_child(again)
 	var menu := Brand.make_button("Voltar ao menu")
 	menu.pressed.connect(func() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file(MENU_SCENE))
-	over_box.add_child(menu)
+	box.add_child(menu)
+	return label
 
 
 func _make_centered_panel(parent: CanvasLayer) -> PanelContainer:
@@ -369,14 +474,6 @@ func _make_centered_panel(parent: CanvasLayer) -> PanelContainer:
 	panel.hide()
 	parent.add_child(panel)
 	return panel
-
-
-func _make_bar(color: Color) -> ProgressBar:
-	var bar := ProgressBar.new()
-	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(340, 22)
-	bar.modulate = color
-	return bar
 
 
 func _bar_label(bar: ProgressBar) -> Label:
@@ -403,10 +500,25 @@ func _toast(text: String, color: Color) -> void:
 
 func _update_hud() -> void:
 	xp_bar.value = xp
-	info_label.text = "%s · Nível %d · %s · Abates %d" % [
-		player.hero["name"], level, _format_time(), kills]
+	info_label.text = "%s · Nível %d · Abates %d" % [player.hero["name"], level, kills]
+	mission_bar.value = mission_progress()
+	if spawning:
+		mission_status.text = "Inimigos surgindo · faltam %s" % _format_clock(MISSION_DURATION - elapsed)
+	else:
+		if not _mission_bar_recolored:
+			_mission_bar_recolored = true
+			mission_bar.add_theme_stylebox_override("fill", Brand.make_box(Color("e0b13a"), Color("e0b13a"), 0, 5))
+		mission_status.text = "Todos surgiram · restam %d inimigos" % enemies_left()
 
 
 func _format_time() -> String:
-	var seconds := int(elapsed)
+	return _clock_text(int(elapsed))
+
+
+## Tempo que falta, arredondado para cima para não mostrar 00:00 antes da hora.
+func _format_clock(total_seconds: float) -> String:
+	return _clock_text(int(ceil(maxf(total_seconds, 0.0))))
+
+
+func _clock_text(seconds: int) -> String:
 	return "%02d:%02d" % [seconds / 60, seconds % 60]

@@ -2,11 +2,14 @@ class_name Weapon
 extends Node
 
 ## Ataque automático do herói. Depende de `kind`:
-## "magic" e "arrow" disparam projéteis, "melee" golpeia tudo ao redor,
-## causando mais dano quanto mais perto o inimigo está.
+## "magic" e "arrow" disparam projéteis, "melee" golpeia em leque só à frente
+## (na direção em que o herói anda), causando mais dano quanto mais perto o
+## inimigo está.
 
 const MELEE_MIN_MULT := 0.6
 const MELEE_MAX_MULT := 2.2
+## Metade da abertura do leque do golpe, em radianos (55 graus).
+const MELEE_HALF_ARC := 0.96
 
 var kind := "magic"
 var damage := 12.0
@@ -62,8 +65,18 @@ func melee_multiplier(distance: float) -> float:
 	return lerp(MELEE_MIN_MULT, MELEE_MAX_MULT, proximity)
 
 
+## Inimigos dentro do alcance e do leque à frente do herói.
+func find_targets_in_front() -> Array:
+	var front: Array = []
+	for enemy in find_targets(attack_range):
+		var to_enemy: Vector2 = enemy.global_position - _player.global_position
+		if absf(_player.facing.angle_to(to_enemy)) <= MELEE_HALF_ARC:
+			front.append(enemy)
+	return front
+
+
 func _swing() -> void:
-	var targets := find_targets(attack_range)
+	var targets := find_targets_in_front()
 	if targets.is_empty():
 		return
 	_cooldown = fire_interval / _player.get_attack_speed_mult()
@@ -71,12 +84,13 @@ func _swing() -> void:
 	for enemy in targets:
 		var distance: float = _player.global_position.distance_to(enemy.global_position)
 		enemy.take_damage(base * melee_multiplier(distance))
-	var ring := RingEffect.new()
-	ring.radius = attack_range
-	ring.color = projectile_color
-	ring.duration = 0.2
-	_world.add_child(ring)
-	ring.global_position = _player.global_position
+	var slash := SlashEffect.new()
+	slash.radius = attack_range
+	slash.half_arc = MELEE_HALF_ARC
+	slash.color = projectile_color
+	slash.facing_angle = _player.facing.angle()
+	_world.add_child(slash)
+	slash.global_position = _player.global_position
 
 
 func _shoot() -> void:
