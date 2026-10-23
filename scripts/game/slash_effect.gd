@@ -11,6 +11,10 @@ var facing_angle := 0.0
 var _time := 0.0
 
 
+func _ready() -> void:
+	z_index = 5
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if _time >= duration:

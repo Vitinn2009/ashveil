@@ -183,6 +183,7 @@ func _explode() -> void:
 # --- Desenho ----------------------------------------------------------------
 
 func _draw() -> void:
+	_draw_shadow()
 	var fill := _body_color()
 	match kind:
 		"bat":
@@ -196,6 +197,16 @@ func _draw() -> void:
 		_:
 			_draw_slime(fill)
 	_draw_health_bar()
+
+
+## Sombra no chão. O morcego voa, então a sombra fica mais longe do corpo.
+func _draw_shadow() -> void:
+	var drop := radius * (2.3 if kind == "bat" else 0.95)
+	var points := PackedVector2Array()
+	for i in 16:
+		var angle := TAU * i / 16.0
+		points.append(Vector2(cos(angle) * radius * 1.15, sin(angle) * radius * 0.4 + drop))
+	draw_colored_polygon(points, Color(0.0, 0.0, 0.0, 0.3))
 
 
 func _body_color() -> Color:

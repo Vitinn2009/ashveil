@@ -154,6 +154,11 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	_tick_buffs(delta)
 	var direction := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var wasd := Vector2(
+		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
+		float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W)))
+	if wasd != Vector2.ZERO:
+		direction = wasd.normalized()
 	if joystick and joystick.output != Vector2.ZERO:
 		direction = joystick.output
 	var moving := direction.length() > 0.05

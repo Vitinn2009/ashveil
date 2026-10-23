@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300">
+  <defs>
+    <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6b4a2d"/>
+      <stop offset="0.45" stop-color="#8a6240"/>
+      <stop offset="1" stop-color="#3b2815"/>
+    </linearGradient>
+    <radialGradient id="leafDark" cx="0.4" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#3f8a35"/>
+      <stop offset="1" stop-color="#1f4a1d"/>
+    </radialGradient>
+    <radialGradient id="leafMid" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#6bb542"/>
+      <stop offset="1" stop-color="#2f6d2a"/>
+    </radialGradient>
+    <radialGradient id="leafLight" cx="0.35" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#a6dc62"/>
+      <stop offset="1" stop-color="#4c9a37"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="124" cy="284" rx="78" ry="14" fill="#000" opacity="0.3"/>
+  <!-- Raízes e tronco -->
+  <path d="M92 290 Q104 276 108 262 L106 190 L136 190 L134 262 Q140 278 154 290 Q124 298 92 290 Z" fill="url(#trunk)"/>
+  <path d="M112 200 Q110 232 114 262" stroke="#3b2815" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M124 196 Q128 228 124 266" stroke="#3b2815" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M132 204 Q130 236 134 258" stroke="#2a1b0e" stroke-width="2" fill="none" opacity="0.5"/>
+  <!-- Copa: camadas de folhagem -->
+  <circle cx="70" cy="140" r="52" fill="url(#leafDark)"/>
+  <circle cx="172" cy="142" r="54" fill="url(#leafDark)"/>
+  <circle cx="122" cy="156" r="62" fill="url(#leafDark)"/>
+  <circle cx="64" cy="108" r="46" fill="url(#leafMid)"/>
+  <circle cx="176" cy="110" r="48" fill="url(#leafMid)"/>
+  <circle cx="122" cy="84" r="62" fill="url(#leafMid)"/>
+  <circle cx="122" cy="130" r="56" fill="url(#leafMid)"/>
+  <circle cx="98" cy="70" r="40" fill="url(#leafLight)"/>
+  <circle cx="150" cy="82" r="34" fill="url(#leafLight)"/>
+  <circle cx="82" cy="112" r="28" fill="url(#leafLight)"/>
+  <!-- Folhas soltas dão textura -->
+  <g fill="#bfe87a" opacity="0.55">
+    <circle cx="90" cy="60" r="6"/><circle cx="112" cy="48" r="5"/><circle cx="136" cy="64" r="6"/>
+    <circle cx="70" cy="96" r="5"/><circle cx="104" cy="92" r="6"/><circle cx="154" cy="100" r="5"/>
+    <circle cx="124" cy="112" r="5"/><circle cx="60" cy="130" r="5"/><circle cx="168" cy="126" r="6"/>
+  </g>
+  <g fill="#1d4a1a" opacity="0.45">
+    <circle cx="100" cy="160" r="7"/><circle cx="140" cy="168" r="8"/><circle cx="76" cy="150" r="6"/>
+    <circle cx="170" cy="150" r="7"/><circle cx="122" cy="186" r="7"/><circle cx="84" cy="176" r="6"/>
+    <circle cx="160" cy="184" r="6"/><circle cx="200" cy="132" r="6"/><circle cx="46" cy="138" r="6"/>
+  </g>
+</svg>

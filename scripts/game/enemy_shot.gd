@@ -9,6 +9,10 @@ var lifetime := 3.0
 var target: Player
 
 
+func _ready() -> void:
+	z_index = 5
+
+
 func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 	rotation += delta * 12.0

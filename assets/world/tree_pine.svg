@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 340" width="180" height="340">
+  <defs>
+    <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6b4a2d"/>
+      <stop offset="0.5" stop-color="#7d583a"/>
+      <stop offset="1" stop-color="#352313"/>
+    </linearGradient>
+    <linearGradient id="tier" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#4a9a56"/>
+      <stop offset="0.5" stop-color="#2f7040"/>
+      <stop offset="1" stop-color="#173f27"/>
+    </linearGradient>
+    <linearGradient id="tierTop" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#5eb068"/>
+      <stop offset="0.5" stop-color="#388050"/>
+      <stop offset="1" stop-color="#1c4a2e"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="92" cy="326" rx="58" ry="11" fill="#000" opacity="0.3"/>
+  <path d="M80 328 L84 262 L100 262 L106 328 Q92 334 80 328 Z" fill="url(#trunk)"/>
+  <!-- Camadas de galhos, de baixo para cima -->
+  <path d="M90 168 L168 268 Q150 258 134 266 Q118 256 104 266 Q90 258 76 266 Q60 256 44 266 Q28 258 12 268 Z" fill="url(#tier)"/>
+  <path d="M90 118 L156 214 Q140 204 124 212 Q108 202 94 212 Q80 204 64 212 Q48 202 24 214 Z" fill="url(#tier)"/>
+  <path d="M90 72 L142 160 Q128 150 112 158 Q98 148 84 158 Q68 150 54 158 Q42 150 38 160 Z" fill="url(#tierTop)"/>
+  <path d="M90 14 L128 100 Q114 92 102 98 Q90 90 78 98 Q64 92 52 100 Z" fill="url(#tierTop)"/>
+  <!-- Luz nas pontas e sombra sob cada camada -->
+  <g stroke="#8fd08f" stroke-width="2" opacity="0.45" fill="none">
+    <path d="M90 20 L60 94"/><path d="M90 76 L50 154"/><path d="M90 122 L36 208"/><path d="M90 172 L24 262"/>
+  </g>
+  <g fill="#0e2a1a" opacity="0.35">
+    <path d="M52 100 Q90 108 128 100 Q90 112 52 100 Z"/>
+    <path d="M38 160 Q90 168 142 160 Q90 172 38 160 Z"/>
+    <path d="M24 214 Q90 224 156 214 Q90 228 24 214 Z"/>
+    <path d="M12 268 Q90 280 168 268 Q90 284 12 268 Z"/>
+  </g>
+</svg>

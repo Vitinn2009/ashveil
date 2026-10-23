@@ -10,6 +10,11 @@ var color := Color("6ec6ff")
 var _time := 0.0
 
 
+func _ready() -> void:
+	# A zona fica no chão: acima da grama e das flores, abaixo de tudo que anda.
+	z_index = -20
+
+
 func _physics_process(delta: float) -> void:
 	_time += delta
 	if _time >= duration:

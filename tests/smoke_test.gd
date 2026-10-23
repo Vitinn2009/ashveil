@@ -16,11 +16,12 @@ func _initialize() -> void:
 func _run() -> void:
 	await _test_screens()
 	await _test_enemies()
+	await _test_scenery()
 	await _test_mission()
 	for hero_id in ["mage", "archer", "warrior"]:
 		await _test_hero(hero_id)
 	# Um erro de script dentro de uma etapa a interrompe em silêncio.
-	_check(_stages_done == 6, "todas as 6 etapas do teste terminaram")
+	_check(_stages_done == 7, "todas as 7 etapas do teste terminaram")
 	print("SMOKE TEST: %s" % ("PASSOU" if _failures == 0 else "FALHOU (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
 
@@ -193,6 +194,134 @@ func _test_enemies() -> void:
 	for node in get_nodes_in_group("enemies"):
 		kinds[node.kind] = true
 	_check(kinds.size() >= 4, "spawner sorteia vários tipos de inimigo")
+
+	_game.queue_free()
+	paused = false
+	await _frames(2)
+	_stages_done += 1
+
+
+func _scenery_sprites() -> Array:
+	var sprites: Array = []
+	for node in _game.world.get_children():
+		if node is Sprite2D and not node.is_queued_for_deletion():
+			sprites.append(node)
+	return sprites
+
+
+## Cenário: grama infinita, árvores e detalhes gerados em volta do herói.
+func _test_scenery() -> void:
+	print("[cenário]")
+	var clear: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color")
+	_check(clear.g > clear.r and clear.g > clear.b, "fundo padrão do jogo é verde, não roxo")
+	var menu: Node = load("res://scenes/Main.tscn").instantiate()
+	root.add_child(menu)
+	await _frames(2)
+	var menu_has_grass := false
+	for node in menu.get_children():
+		if node is TextureRect and node.texture and node.texture.resource_path.ends_with("grass.png"):
+			menu_has_grass = true
+	_check(menu_has_grass, "tela inicial tem campo de grama")
+	menu.queue_free()
+
+	root.get_node("Session").hero_id = "warrior"
+	_game = load("res://scenes/Game.tscn").instantiate()
+	root.add_child(_game)
+	await _frames(3)
+	var player: Player = _game.player
+	var ground: GroundLayer = _game.ground
+	var decor: WorldDecor = _game.decor
+
+	_check(_game.world.y_sort_enabled, "mundo ordena por profundidade (Y)")
+	_check(ground.texture_repeat == CanvasItem.TEXTURE_REPEAT_ENABLED and ground._texture.resource_path.ends_with("grass.png"), "chão usa a textura de grama repetida")
+	_check(ground.z_index < WorldDecor.GROUND_Z, "grama fica abaixo de flores e tufos")
+	player.global_position = Vector2(1000.0, -700.0)
+	ground._process(0.0)
+	_check(is_equal_approx(fmod(ground.position.x, GroundLayer.TILE), 0.0) and is_equal_approx(fmod(ground.position.y, GroundLayer.TILE), 0.0), "chão acompanha o herói em múltiplos do ladrilho")
+	player.global_position = Vector2.ZERO
+	ground._process(0.0)
+
+	# As setas movem o herói (o WASD usa o mesmo caminho, lendo as teclas direto).
+	Input.action_press("ui_right")
+	var before_move := player.global_position
+	player._physics_process(0.1)
+	Input.action_release("ui_right")
+	_check(player.global_position.x > before_move.x and player.facing.x > 0.9, "setas movem o herói e definem a direção")
+	player.global_position = Vector2.ZERO
+
+	_check(decor.loaded_chunk_count() == (WorldDecor.LOAD_RADIUS * 2 + 1) ** 2, "pedaços do cenário carregados em volta do herói")
+	var total := decor.decor_count()
+	_check(total > 250 and total < 2500, "quantidade de elementos do cenário é razoável (%d)" % total)
+	var kinds := {}
+	for entry in decor.plan_chunk(Vector2i(0, 0)) + decor.plan_chunk(Vector2i(1, 0)) + decor.plan_chunk(Vector2i(0, 1)) + decor.plan_chunk(Vector2i(-1, -1)):
+		kinds[entry["kind"]] = true
+	_check(kinds.has("oak") or kinds.has("pine"), "o cenário tem árvores")
+	_check(kinds.has("bush") and kinds.has("tuft") and kinds.has("flowers_white") or kinds.has("flowers_red") or kinds.has("flowers_blue"), "o cenário tem arbustos, flores e tufos de grama")
+	_check(kinds.has("rock_a") or kinds.has("rock_b"), "o cenário tem pedras")
+
+	var too_close := 0
+	var ground_decor := 0
+	for sprite in _scenery_sprites():
+		if sprite.z_index == 0 and sprite.position.length() < WorldDecor.SAFE_RADIUS:
+			too_close += 1
+		if sprite.z_index == WorldDecor.GROUND_Z:
+			ground_decor += 1
+	_check(too_close == 0, "nenhuma árvore ou pedra nasce em cima do ponto inicial")
+	_check(ground_decor > 0, "flores e tufos ficam abaixo dos personagens")
+
+	# O mesmo pedaço nasce sempre igual para o mesmo seed.
+	var first := decor.plan_chunk(Vector2i(3, -2))
+	var second := decor.plan_chunk(Vector2i(3, -2))
+	var same := first.size() == second.size()
+	for i in mini(first.size(), second.size()):
+		same = same and first[i]["kind"] == second[i]["kind"] and first[i]["position"] == second[i]["position"]
+	_check(same, "o mesmo pedaço gera sempre o mesmo cenário")
+	var other := WorldDecor.new()
+	other.world_seed = decor.world_seed + 1234
+	other._noise.seed = other.world_seed
+	var different := other.plan_chunk(Vector2i(3, -2))
+	var differs := different.size() != first.size()
+	for i in mini(first.size(), different.size()):
+		differs = differs or first[i]["position"] != different[i]["position"]
+	_check(differs, "seeds diferentes geram cenários diferentes")
+	other.free()
+
+	# Andar longe carrega cenário novo e descarta o antigo.
+	player.global_position = Vector2(5000.0, 5000.0)
+	decor._process(0.0)
+	await _frames(2)
+	var near_new := 0
+	var near_old := 0
+	for sprite in _scenery_sprites():
+		if sprite.position.distance_to(player.global_position) < 900.0:
+			near_new += 1
+		if sprite.position.length() < 1500.0:
+			near_old += 1
+	_check(near_new > 100, "cenário novo aparece onde o herói chegou")
+	_check(near_old == 0, "cenário antigo é descartado ao se afastar")
+	_check(decor.loaded_chunk_count() <= (WorldDecor.UNLOAD_RADIUS * 2 + 1) ** 2, "pedaços carregados ficam limitados")
+	player.global_position = Vector2.ZERO
+	decor._process(0.0)
+
+	# Camadas: efeitos acima do cenário, zona de gelo e flores no chão.
+	var ring := RingEffect.new()
+	_game.world.add_child(ring)
+	var zone := SkillZone.new()
+	_game.world.add_child(zone)
+	var pickup := Pickup.new()
+	_game.world.add_child(pickup)
+	_check(ring.z_index > 0 and zone.z_index < 0 and zone.z_index > WorldDecor.GROUND_Z and pickup.z_index > 0, "efeitos e drops aparecem acima do cenário; a zona de gelo, no chão")
+	ring.free()
+	zone.free()
+	pickup.free()
+
+	var vignette := false
+	for layer in _game.get_children():
+		if layer is CanvasLayer:
+			for child in layer.get_children():
+				if child is TextureRect and child.texture is GradientTexture2D and child.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+					vignette = true
+	_check(vignette, "vinheta escurece as bordas sem bloquear toques")
 
 	_game.queue_free()
 	paused = false

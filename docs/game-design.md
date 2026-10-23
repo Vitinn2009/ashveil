@@ -30,7 +30,7 @@
 - **Velocidade (Arqueiro):** +50% de movimento e +40% de velocidade de ataque por 6s.
 - **Escudo (Guerreiro):** absorve dano por 6s (50 + 3x defesa).
 
-Teclas no computador: 1, 2 e 3 para as habilidades, Q para a poção.
+Teclas no computador: WASD ou setas para andar, 1, 2 e 3 para as habilidades, Q para a poção.
 
 ### Atributos das habilidades (popup a cada 10 níveis, 4 pontos, máx. 5 por atributo)
 
@@ -93,6 +93,15 @@ Implementado:
 
 Ainda não implementado: persistência (save), meta-progressão, biomas, chefes, missões, áudio, mais heróis.
 O ouro e o inventário valem só para a partida atual.
+
+## Cenário
+
+O jogo acontece num campo de grama infinito, sem fundo roxo:
+- **Chão:** textura de grama seamless (`assets/world/grass.png`, gerada por `tools/make_grass.gd`) repetida em volta do herói.
+- **Elementos:** carvalhos, pinheiros, arbustos com frutinhas, pedras, troncos caídos, tocos, cogumelos, flores (brancas, vermelhas e azuis), tufos de grama e manchas de terra. A arte está em `assets/world/` (SVG com gradientes e sombras); [docs/cenario.png](cenario.png) mostra todos.
+- **Geração:** o mundo é dividido em pedaços de 640 px. Os 5x5 pedaços em volta do herói recebem cenário sorteado a partir do seed da partida e das coordenadas do pedaço, e os que ficam longe são descartados. Um ruído suave cria florestas densas e clareiras. Nada nasce num raio de 150 px do ponto inicial.
+- **Profundidade:** o herói, os inimigos, as árvores e as pedras são ordenados por Y, então o herói passa na frente ou atrás das árvores. Flores, tufos e terra ficam abaixo de todos, e os efeitos e drops, acima. As árvores e pedras não bloqueiam o movimento.
+- **Acabamento:** sombras sob os inimigos (mais distantes no morcego, que voa) e uma vinheta que escurece as bordas.
 
 ## Decisões técnicas
 

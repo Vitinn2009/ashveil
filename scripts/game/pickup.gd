@@ -13,6 +13,11 @@ var target: Player
 var _collected := false
 
 
+func _ready() -> void:
+	# Os drops ficam sempre visíveis, mesmo atrás de uma árvore.
+	z_index = 1
+
+
 func _physics_process(delta: float) -> void:
 	if _collected or target == null:
 		return

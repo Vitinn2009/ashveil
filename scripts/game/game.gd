@@ -25,6 +25,8 @@ const POTION_CHANCE := 0.035
 const ITEM_CHANCE := 0.04
 
 var world: Node2D
+var ground: GroundLayer
+var decor: WorldDecor
 var player: Player
 var weapon: Weapon
 var joystick: VirtualJoystick
@@ -70,11 +72,22 @@ var _toast_tween: Tween
 
 func _ready() -> void:
 	world = Node2D.new()
+	# Ordena por Y: o herói e os inimigos passam na frente ou atrás das árvores.
+	world.y_sort_enabled = true
 	add_child(world)
+
+	ground = GroundLayer.new()
+	world.add_child(ground)
 
 	player = Player.new()
 	player.hero_id = Session.hero_id
 	world.add_child(player)
+	ground.follow = player
+
+	decor = WorldDecor.new()
+	decor.world = world
+	decor.follow = player
+	add_child(decor)
 
 	weapon = Weapon.new()
 	player.add_child(weapon)
@@ -85,6 +98,7 @@ func _ready() -> void:
 	camera.offset = Vector2(InventoryPanel.WIDTH * 0.5, 0)
 	player.add_child(camera)
 
+	_build_vignette()
 	_build_hud()
 	player.joystick = joystick
 	player.health_changed.connect(_on_player_health_changed)
@@ -351,6 +365,28 @@ func _on_player_died() -> void:
 
 
 # --- HUD --------------------------------------------------------------------
+
+## Escurece de leve as bordas da tela, dando profundidade e foco no herói.
+func _build_vignette() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.55, 1.0])
+	gradient.colors = PackedColorArray([Color(0.0, 0.05, 0.02, 0.0), Color(0.0, 0.05, 0.02, 0.5)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 256
+	texture.height = 256
+	var overlay := TextureRect.new()
+	overlay.texture = texture
+	overlay.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	overlay.stretch_mode = TextureRect.STRETCH_SCALE
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(overlay)
 
 func _build_hud() -> void:
 	var hud := CanvasLayer.new()

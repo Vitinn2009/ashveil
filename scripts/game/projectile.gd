@@ -14,6 +14,7 @@ var _already_hit: Array = []
 
 
 func _ready() -> void:
+	z_index = 5
 	rotation = velocity.angle()
 
 

@@ -11,12 +11,19 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
-	# Chão e brasas ao fundo, para dar clima à tela inicial.
-	var ground := ColorRect.new()
-	ground.color = Color("120a24")
+	# Campo de grama com árvores atrás dos heróis.
+	var ground := TextureRect.new()
+	ground.texture = load("res://assets/world/grass.png")
+	ground.stretch_mode = TextureRect.STRETCH_TILE
+	ground.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ground.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	ground.offset_top = -210.0
 	add_child(ground)
+	_add_scenery("res://assets/world/tree_pine.svg", 0.07, Vector2(150, 285), 232.0)
+	_add_scenery("res://assets/world/tree_oak.svg", 0.93, Vector2(260, 325), 232.0)
+	_add_scenery("res://assets/world/tree_pine.svg", 0.18, Vector2(110, 210), 200.0)
+	_add_scenery("res://assets/world/bush.svg", 0.84, Vector2(150, 107), 180.0)
+	_add_scenery("res://assets/world/rock_a.svg", 0.27, Vector2(110, 77), 168.0)
 
 	var heroes := HBoxContainer.new()
 	heroes.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -51,7 +58,7 @@ func _ready() -> void:
 	play.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
 	column.add_child(play)
 
-	var version := _make_title("Protótipo v0.4", 14, Brand.MOSS.lightened(0.4))
+	var version := _make_title("Protótipo v0.5", 14, Brand.MOSS.lightened(0.4))
 	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -200.0
 	version.offset_top = -30.0
@@ -59,6 +66,24 @@ func _ready() -> void:
 	version.offset_bottom = -8.0
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(version)
+
+
+## Coloca um elemento do cenário com a base na altura `base_y` acima do rodapé.
+func _add_scenery(path: String, anchor_x: float, size: Vector2, base_y: float) -> void:
+	var art := TextureRect.new()
+	art.texture = load(path)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.anchor_left = anchor_x
+	art.anchor_right = anchor_x
+	art.anchor_top = 1.0
+	art.anchor_bottom = 1.0
+	art.offset_left = -size.x * 0.5
+	art.offset_right = size.x * 0.5
+	art.offset_bottom = -base_y + 12.0
+	art.offset_top = art.offset_bottom - size.y
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(art)
 
 
 func _make_hero_art(id: String, scale_factor: float) -> TextureRect:
