@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 160" width="128" height="160">
+  <!-- Sombra -->
+  <ellipse cx="64" cy="152" rx="32" ry="6" fill="#000" opacity="0.28"/>
+  <!-- Aljava nas costas -->
+  <path d="M80 72 L95 62 L101 94 L87 101 Z" fill="#7a4a21" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="86" y1="68" x2="83" y2="50" stroke="#1b1036" stroke-width="5" stroke-linecap="round"/>
+  <line x1="86" y1="68" x2="83" y2="50" stroke="#f4e9d8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="92" y1="65" x2="92" y2="47" stroke="#1b1036" stroke-width="5" stroke-linecap="round"/>
+  <line x1="92" y1="65" x2="92" y2="47" stroke="#f4e9d8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="98" y1="63" x2="101" y2="46" stroke="#1b1036" stroke-width="5" stroke-linecap="round"/>
+  <line x1="98" y1="63" x2="101" y2="46" stroke="#f4e9d8" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="83" cy="49" r="3" fill="#e0452d"/>
+  <circle cx="92" cy="46" r="3" fill="#e0452d"/>
+  <circle cx="101" cy="45" r="3" fill="#e0452d"/>
+  <!-- Botas -->
+  <rect x="44" y="140" width="17" height="12" rx="4" fill="#5a3a1a" stroke="#1b1036" stroke-width="3"/>
+  <rect x="67" y="140" width="17" height="12" rx="4" fill="#5a3a1a" stroke="#1b1036" stroke-width="3"/>
+  <!-- Capa/túnica -->
+  <path d="M38 144 L46 86 Q64 76 82 86 L90 144 Z" fill="#3e6b48" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="45" y="112" width="38" height="7" fill="#8b5a2b" stroke="#1b1036" stroke-width="2"/>
+  <rect x="59" y="111" width="10" height="9" fill="#f2b705" stroke="#1b1036" stroke-width="1.5"/>
+  <!-- Braço -->
+  <ellipse cx="45" cy="98" rx="8" ry="14" fill="#2e5236" stroke="#1b1036" stroke-width="3"/>
+  <!-- Arco -->
+  <path d="M30 38 Q2 90 30 142" fill="none" stroke="#1b1036" stroke-width="8" stroke-linecap="round"/>
+  <path d="M30 38 Q2 90 30 142" fill="none" stroke="#a8692f" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="30" y1="38" x2="30" y2="142" stroke="#f4e9d8" stroke-width="1.6"/>
+  <circle cx="33" cy="94" r="5.5" fill="#f0c8a0" stroke="#1b1036" stroke-width="2.5"/>
+  <!-- Cabeça -->
+  <circle cx="64" cy="64" r="16" fill="#f0c8a0" stroke="#1b1036" stroke-width="3"/>
+  <circle cx="58" cy="64" r="2.4" fill="#1b1036"/>
+  <circle cx="70" cy="64" r="2.4" fill="#1b1036"/>
+  <!-- Capuz -->
+  <path d="M43 72 Q42 34 64 32 Q86 34 85 72 Q77 52 64 51 Q51 52 43 72 Z" fill="#2e5236" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Pena -->
+  <path d="M80 38 Q98 26 95 46 Q88 44 80 38 Z" fill="#e0452d" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+</svg>

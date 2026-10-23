@@ -2,36 +2,69 @@
 
 ## Loop de partida (5 a 12 minutos)
 
-- O herói ataca sozinho. O jogador controla só o movimento.
-- Inimigos chegam em hordas que aumentam com o tempo.
-- Gemas de XP são atraídas para o herói ao chegar perto.
+- O herói ataca sozinho. O jogador controla o movimento e dispara as habilidades.
+- Inimigos chegam em hordas que aumentam com o tempo, com três tipos (comum, veloz e brutamontes).
+- Ao morrer, o inimigo solta XP e, com sorte, ouro, poção ou equipamento.
 - Ao subir de nível, o jogador escolhe 1 de 3 melhorias.
+- A cada 5 níveis abre um popup para distribuir 3 pontos de atributo.
 - Chefe ao fim de cada bioma (a fazer no M4).
 
-## Camada RPG (planejada)
+## Heróis
 
-- **Classes:** Guerreiro, Mago, Arqueiro, Clérigo, Ladino (M2).
-- **Atributos:** Força, Destreza, Inteligência, Vitalidade, Sorte (M2).
-- **Equipamento:** raridades, afixos e slots (M2).
-- **Meta-progressão:** hub da cidade com ferreiro, biblioteca de talentos, taverna e altar (M3).
-- **Biomas:** Floresta Sombria, Pântano, Ruínas, Vulcão (M4).
+| | Mago | Arqueiro | Guerreiro |
+|---|---|---|---|
+| Ataque | Magia à distância | Flechas que atravessam 1 inimigo | Golpe em área corpo a corpo |
+| Vida base | 70 | 95 | 150 |
+| Defesa base | 0 | 2 | 6 |
+| Velocidade | 200 | 235 | 215 |
+| Habilidades | Gelo, Fogo, Vento | Flecha Dupla, Velocidade | Escudo |
 
-## Estado atual (M1, em código)
+- **Guerreiro:** quanto menor a distância do inimigo, maior o dano. O golpe vai de 0,6x na borda do alcance até 2,2x colado no inimigo.
+- **Gelo (Mago):** congela o chão por 5s e deixa os inimigos 60% mais lentos.
+- **Fogo (Mago):** bola de fogo que queima o inimigo 3 vezes, uma por segundo, com dano de 8 x o multiplicador de ataque por queimadura.
+- **Vento (Mago):** empurra os inimigos próximos e causa um pouco de dano.
+- **Flecha Dupla (Arqueiro):** dobra a quantidade de flechas por 6s.
+- **Velocidade (Arqueiro):** +50% de movimento e +40% de velocidade de ataque por 6s.
+- **Escudo (Guerreiro):** absorve dano por 6s (50 + 3x defesa).
 
-Implementado nesta etapa:
-- Movimento por joystick virtual (toque) ou WASD/setas (teclado)
-- Arma automática que mira no inimigo mais próximo
-- Hordas que aparecem ao redor do herói, com dificuldade crescente
-- Gemas de XP com atração magnética
-- Level-up com 3 cartas de melhoria (o jogo pausa)
-- Tela de fim de jogo com estatísticas
+Teclas no computador: 1, 2 e 3 para as habilidades, Q para a poção.
 
-Ainda não implementado: classes, equipamentos, meta-progressão, biomas, chefes, missões, save, áudio.
+## Atributos (popup a cada 5 níveis, 3 pontos)
+
+| Atributo | Efeito por ponto |
+|---|---|
+| HP | +12 de vida máxima |
+| Defesa | Reduz o dano recebido: dano x (1 - defesa / (defesa + 25)) |
+| Ataque | +8% de dano |
+| Rapidez | +3% de movimento e +3% de velocidade de ataque |
+| Sorte | +8% de XP ganho, +10% de chance de drop, mais ouro e chance de drop duplo |
+
+O popup só fecha quando todos os pontos forem gastos. Equipamentos somam pontos nesses mesmos atributos.
+
+## Inventário (painel à direita)
+
+- Ouro, poções de vida (curam 40% da vida máxima), equipamentos e mochila de 12 espaços.
+- 4 slots de equipamento: arma, armadura, botas e anel.
+- Raridades: comum, raro, épico e lendário. A Sorte aumenta a chance das raras.
+- Tocar em um item da mochila mostra os detalhes, com botões Equipar e Vender.
+- Mochila cheia: o item novo é vendido automaticamente.
+
+## Estado atual
+
+Implementado:
+- Tela inicial, seleção de herói (3 personagens) e partida.
+- Arte dos 3 heróis (SVG em `assets/characters/`, renderizados em [personagens.png](personagens.png)).
+- Ataque automático por classe, habilidades com recarga e barra de habilidades.
+- Inimigos com barra de vida, lentidão, queimadura e empurrão.
+- Drops (XP, ouro, poção, equipamento), inventário e popup de atributos.
+
+Ainda não implementado: persistência (save), meta-progressão, biomas, chefes, missões, áudio, mais heróis.
+O ouro e o inventário valem só para a partida atual.
 
 ## Decisões técnicas
 
-- Orientação: paisagem (1280x720, expansível).
-- Android: o APK atual sai com minSdk 21 e targetSdk 34 (padrão do template do Godot 4.4.1), só arm64.
+- Orientação: paisagem (1280x720, expansível). O inventário ocupa 270 px à direita e a câmera é deslocada para o herói ficar no centro da área livre.
+- Android: o APK sai com minSdk 21 e targetSdk 34 (padrão do template do Godot 4.4.1), só arm64.
 - Renderização: `gl_compatibility`, para aparelhos de entrada.
-- Sprites temporários desenhados por código. Trocar por arte no M5.
+- Inimigos e efeitos ainda são desenhados por código. Os heróis usam arte SVG.
 - Pool de objetos ainda não implementado. Entrará se o teste de desempenho pedir.

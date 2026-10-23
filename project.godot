@@ -13,6 +13,7 @@ config/icon="res://assets/brand/icon.svg"
 [autoload]
 
 EventBus="*res://scripts/autoload/event_bus.gd"
+Session="*res://scripts/autoload/session.gd"
 
 [display]
 

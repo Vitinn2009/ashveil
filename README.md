@@ -38,11 +38,12 @@ Observações que custaram tempo descobrir:
 godot --headless --path . --script res://tests/smoke_test.gd
 ```
 
-Roda uma partida simulada: spawn, joystick, level-up, melhorias e fim de jogo.
+Roda uma partida simulada para os três heróis: telas, ataque, habilidades, inventário, atributos, level-up, popup de status e fim de jogo. No modo `--script`, o Godot imprime "Identifier not found: EventBus" no stderr ao carregar as classes antes dos autoloads. O teste continua e termina com "SMOKE TEST: PASSOU".
 
-## Ícones
+## Ferramentas
 
-`tools/make_icons.gd` gera os PNGs de `assets/brand/` a partir dos SVGs.
+- `tools/make_icons.gd` gera os PNGs de `assets/brand/` a partir dos SVGs.
+- `tools/render_characters.gd` renderiza os três heróis em `docs/personagens.png`.
 
 ## Documentação
 
@@ -51,4 +52,4 @@ Roda uma partida simulada: spawn, joystick, level-up, melhorias e fim de jogo.
 
 ## Status
 
-Pronto: base do projeto, marca e núcleo de combate (M0 e M1). Próximas fases: RPG com classes e equipamentos (M2), progressão permanente (M3), conteúdo (M4).
+Pronto: base, marca, núcleo de combate e a primeira camada de RPG (M0 a M2 em versão inicial): 3 heróis com habilidades, inventário, drops e atributos. Próximas fases: progressão permanente e save (M3), conteúdo com biomas e chefes (M4).

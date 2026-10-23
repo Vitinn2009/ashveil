@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 160" width="128" height="160">
+  <!-- Sombra -->
+  <ellipse cx="64" cy="152" rx="32" ry="6" fill="#000" opacity="0.28"/>
+  <!-- Brilho do cajado -->
+  <circle cx="102" cy="28" r="17" fill="#6ec6ff" opacity="0.28"/>
+  <!-- Cajado -->
+  <line x1="102" y1="34" x2="102" y2="150" stroke="#1b1036" stroke-width="8" stroke-linecap="round"/>
+  <line x1="102" y1="34" x2="102" y2="150" stroke="#8b5a2b" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="102" cy="26" r="10" fill="#6ec6ff" stroke="#1b1036" stroke-width="3"/>
+  <circle cx="98.5" cy="22.5" r="3.2" fill="#ffffff" opacity="0.85"/>
+  <!-- Manto -->
+  <path d="M32 150 L43 84 Q64 72 85 84 L96 150 Z" fill="#5b3fa8" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M32 150 L96 150 L94 140 L34 140 Z" fill="#f2b705" stroke="#1b1036" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="43" y="108" width="42" height="7" fill="#f2b705" stroke="#1b1036" stroke-width="2"/>
+  <!-- Mangas -->
+  <ellipse cx="38" cy="102" rx="9" ry="15" fill="#4a3290" stroke="#1b1036" stroke-width="3"/>
+  <ellipse cx="90" cy="100" rx="9" ry="14" fill="#4a3290" stroke="#1b1036" stroke-width="3"/>
+  <circle cx="102" cy="98" r="5.5" fill="#f0c8a0" stroke="#1b1036" stroke-width="2.5"/>
+  <!-- Cabeça -->
+  <circle cx="64" cy="66" r="17" fill="#f0c8a0" stroke="#1b1036" stroke-width="3"/>
+  <!-- Barba -->
+  <path d="M49 71 Q64 106 79 71 Q64 80 49 71 Z" fill="#f4e9d8" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="58" cy="63" r="2.4" fill="#1b1036"/>
+  <circle cx="70" cy="63" r="2.4" fill="#1b1036"/>
+  <!-- Chapéu -->
+  <ellipse cx="64" cy="54" rx="31" ry="8" fill="#4a3290" stroke="#1b1036" stroke-width="3"/>
+  <path d="M46 52 Q58 26 74 6 Q76 32 83 52 Z" fill="#5b3fa8" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="47" y="46" width="35" height="6" fill="#f2b705" stroke="#1b1036" stroke-width="2"/>
+  <circle cx="68" cy="30" r="4" fill="#f2b705" stroke="#1b1036" stroke-width="1.5"/>
+</svg>

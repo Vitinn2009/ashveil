@@ -31,6 +31,18 @@ static func make_panel() -> PanelContainer:
 	return panel
 
 
+static func make_box(background: Color, border: Color, border_width := 3, radius := 12) -> StyleBoxFlat:
+	return _box(background, border, border_width, radius)
+
+
+static func make_label(text := "", font_size := 18, color := PARCHMENT) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
 static func _box(background: Color, border: Color, border_width := 3, radius := 12) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = background
