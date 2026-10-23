@@ -29,6 +29,22 @@
 
 Teclas no computador: 1, 2 e 3 para as habilidades, Q para a poção.
 
+## Inimigos
+
+Cinco tipos, cada um com uma característica própria. Entram na partida em momentos diferentes e a vida e o dano deles crescem com o tempo.
+
+| Tipo | Aparece | Característica | Vida | Vel. | Dano | XP |
+|---|---|---|---|---|---|---|
+| Gosma | 0s | Ao morrer, se divide em duas gosmas menores, mais rápidas e frágeis. As menores não soltam itens e não se dividem de novo. | 24 | 48 | 6 | 1 |
+| Morcego | 25s | Voa em zigue-zague e é muito rápido, mas frágil. | 11 | 125 | 4 | 1 |
+| Esqueleto Arqueiro | 50s | Mantém distância (recua se o herói chega perto, se aproxima se está longe) e atira ossos. | 20 | 62 | 5 | 2 |
+| Bomba-viva | 75s | Corre até o herói, para, pisca por 0,8s e explode numa área de 110 px. Explodir sozinha não conta como abate e não solta nada. | 14 | 88 | 0 | 2 |
+| Bruto | 100s | Enorme: reduz 25% do dano recebido e ignora o empurrão do Vento. | 120 | 36 | 14 | 5 |
+
+Os valores de vida e dano são da base, no segundo 0. O sorteio usa pesos (Gosma 10, Morcego 5, Esqueleto 4, Bomba-viva 3, Bruto 2,5), então as gosmas continuam as mais comuns. O catálogo está em `scripts/game/enemy_types.gd`.
+
+A cena `scenes/Bestiary.tscn` mostra os cinco lado a lado, para conferir o visual.
+
 ## Atributos (popup a cada 5 níveis, 3 pontos)
 
 | Atributo | Efeito por ponto |
@@ -55,7 +71,7 @@ Implementado:
 - Tela inicial, seleção de herói (3 personagens) e partida.
 - Arte dos 3 heróis (SVG em `assets/characters/`, renderizados em [personagens.png](personagens.png)).
 - Ataque automático por classe, habilidades com recarga e barra de habilidades.
-- Inimigos com barra de vida, lentidão, queimadura e empurrão.
+- 5 tipos de inimigo com comportamentos diferentes, todos com barra de vida, lentidão, queimadura e empurrão.
 - Drops (XP, ouro, poção, equipamento), inventário e popup de atributos.
 
 Ainda não implementado: persistência (save), meta-progressão, biomas, chefes, missões, áudio, mais heróis.

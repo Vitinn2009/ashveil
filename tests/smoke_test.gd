@@ -5,6 +5,7 @@ extends SceneTree
 ## Sai com código 0 se tudo passar, 1 se alguma verificação falhar.
 
 var _failures := 0
+var _stages_done := 0
 var _game: Node
 
 
@@ -14,8 +15,11 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _test_screens()
+	await _test_enemies()
 	for hero_id in ["mage", "archer", "warrior"]:
 		await _test_hero(hero_id)
+	# Um erro de script dentro de uma etapa a interrompe em silêncio.
+	_check(_stages_done == 5, "todas as 5 etapas do teste terminaram")
 	print("SMOKE TEST: %s" % ("PASSOU" if _failures == 0 else "FALHOU (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
 
@@ -50,6 +54,149 @@ func _test_screens() -> void:
 	_check(root.get_node("Session").hero_id == "archer", "Começar grava o herói escolhido")
 	select.queue_free()
 	await _frames(2)
+	_stages_done += 1
+
+
+func _make_enemy(kind: String, offset: Vector2) -> Enemy:
+	var enemy := Enemy.new()
+	enemy.target = _game.player
+	enemy.setup(kind, 0.0)
+	_game.world.add_child(enemy)
+	enemy.global_position = _game.player.global_position + offset
+	return enemy
+
+
+func _count_nodes_of(script_class) -> int:
+	var total := 0
+	for node in _game.world.get_children():
+		if is_instance_of(node, script_class):
+			total += 1
+	return total
+
+
+func _test_enemies() -> void:
+	print("[inimigos]")
+	root.get_node("Session").hero_id = "warrior"
+	_game = load("res://scenes/Game.tscn").instantiate()
+	root.add_child(_game)
+	await _frames(3)
+	var player: Player = _game.player
+
+	_check(EnemyTypes.DATA.size() == 5, "catálogo com 5 tipos de inimigo")
+	var traits := {}
+	for kind in EnemyTypes.DATA:
+		traits[EnemyTypes.DATA[kind]["trait"]] = true
+	_check(traits.size() == 5, "cada tipo tem uma característica diferente")
+	_check(EnemyTypes.pick(0.0) == "slime", "no início só aparecem gosmas")
+	var seen := {}
+	for i in 600:
+		seen[EnemyTypes.pick(200.0)] = true
+	_check(seen.size() == 5, "depois de 100s os 5 tipos aparecem")
+	for kind in EnemyTypes.DATA:
+		var enemy := _make_enemy(kind, Vector2(900, 0))
+		var data := EnemyTypes.get_type(kind)
+		_check(enemy.kind == kind and is_equal_approx(enemy.max_health, data["health"]) and enemy.radius == data["radius"], "setup aplica os atributos de %s" % kind)
+		enemy.free()
+
+	# Gosma: se divide em duas menores.
+	var slime := _make_enemy("slime", Vector2(900, 0))
+	var slime_radius := slime.radius
+	slime.take_damage(99999.0)
+	await _frames(2)
+	var minis: Array = []
+	for node in get_nodes_in_group("enemies"):
+		if node.generation == 1:
+			minis.append(node)
+	_check(minis.size() == 2, "gosma se divide em duas ao morrer")
+	_check(minis.size() == 2 and minis[0].radius < slime_radius and not minis[0].loot, "gosmas pequenas são menores e não soltam itens")
+	for mini in minis:
+		mini.take_damage(99999.0)
+	await _frames(2)
+	var generation_one := 0
+	for node in get_nodes_in_group("enemies"):
+		if node.generation == 1:
+			generation_one += 1
+	_check(generation_one == 0, "gosma pequena não se divide de novo")
+
+	# Morcego: zigue-zague e velocidade alta.
+	var bat := _make_enemy("bat", Vector2(900, 0))
+	var start := bat.global_position
+	var line := (player.global_position - start).normalized()
+	var deviation := 0.0
+	for i in 40:
+		bat._physics_process(0.03)
+		deviation = max(deviation, abs((bat.global_position - start).cross(line)))
+	_check(deviation > 8.0, "morcego voa em zigue-zague")
+	_check(bat.speed > EnemyTypes.DATA["slime"]["speed"] * 2.0, "morcego é bem mais rápido que a gosma")
+	bat.free()
+
+	# Esqueleto: mantém distância e atira.
+	var near_skeleton := _make_enemy("skeleton", Vector2(150, 0))
+	var near_before := near_skeleton.global_position.distance_to(player.global_position)
+	for i in 20:
+		near_skeleton._physics_process(0.05)
+	_check(near_skeleton.global_position.distance_to(player.global_position) > near_before, "esqueleto recua quando o herói chega perto")
+	var far_skeleton := _make_enemy("skeleton", Vector2(480, 0))
+	var far_before := far_skeleton.global_position.distance_to(player.global_position)
+	for i in 20:
+		far_skeleton._physics_process(0.05)
+	_check(far_skeleton.global_position.distance_to(player.global_position) < far_before, "esqueleto se aproxima quando está longe")
+	var shots_before := _count_nodes_of(EnemyShot)
+	near_skeleton._shot_timer = 0.0
+	near_skeleton._physics_process(0.016)
+	_check(_count_nodes_of(EnemyShot) == shots_before + 1, "esqueleto atira ossos")
+	var shot := EnemyShot.new()
+	shot.target = player
+	shot.damage = 7.0
+	_game.world.add_child(shot)
+	shot.global_position = player.global_position
+	var health_before_shot := player.health
+	shot._physics_process(0.016)
+	_check(player.health < health_before_shot, "osso fere o herói")
+	near_skeleton.free()
+	far_skeleton.free()
+
+	# Bruto: ignora empurrão e reduz o dano.
+	var brute := _make_enemy("brute", Vector2(900, 0))
+	brute.knockback(Vector2(500, 0))
+	_check(brute._push == Vector2.ZERO, "bruto ignora empurrão")
+	var pushed := _make_enemy("slime", Vector2(900, 100))
+	pushed.knockback(Vector2(500, 0))
+	_check(pushed._push != Vector2.ZERO, "gosma é empurrada")
+	var brute_health := brute.health
+	brute.take_damage(100.0)
+	_check(is_equal_approx(brute_health - brute.health, 75.0), "bruto reduz o dano em 25%")
+	_check(brute.radius > 2.0 * pushed.radius * 0.75, "bruto é enorme")
+	brute.free()
+	pushed.free()
+
+	# Bomba-viva: acende o pavio e explode em área.
+	var bomber := _make_enemy("bomber", Vector2(60, 0))
+	var kills_before: int = _game.kills
+	var health_before_bomb := player.health
+	bomber._physics_process(0.016)
+	_check(bomber._fuse > 0.0, "bomba-viva acende o pavio perto do herói")
+	bomber._physics_process(1.0)
+	_check(player.health < health_before_bomb, "explosão fere o herói dentro da área")
+	_check(bomber.is_queued_for_deletion() and _game.kills == kills_before, "explosão não conta como abate")
+	var distant_bomber := _make_enemy("bomber", Vector2(300, 0))
+	var health_before_far := player.health
+	distant_bomber._explode()
+	_check(is_equal_approx(player.health, health_before_far), "explosão longe não fere o herói")
+
+	# O spawner usa o catálogo.
+	_game.elapsed = 200.0
+	for i in 60:
+		_game._spawn_enemy()
+	var kinds := {}
+	for node in get_nodes_in_group("enemies"):
+		kinds[node.kind] = true
+	_check(kinds.size() >= 4, "spawner sorteia vários tipos de inimigo")
+
+	_game.queue_free()
+	paused = false
+	await _frames(2)
+	_stages_done += 1
 
 
 func _spawn_enemy(offset: Vector2, health := 30.0) -> Enemy:
@@ -86,6 +233,7 @@ func _test_hero(hero_id: String) -> void:
 	_game.queue_free()
 	paused = false
 	await _frames(2)
+	_stages_done += 1
 
 
 func _test_combat(hero: Dictionary) -> void:

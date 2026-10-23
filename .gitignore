@@ -17,4 +17,4 @@ export/*.aab
 Thumbs.db
 .vscode/
 .idea/
-export/web/
+export/*/

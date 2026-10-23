@@ -128,32 +128,16 @@ func _spawn_enemy() -> void:
 		return
 	var enemy := Enemy.new()
 	enemy.target = player
-	var hp_scale := 1.0 + elapsed / 50.0
-	var roll := randf()
-	if elapsed > 90.0 and roll < 0.12:
-		enemy.max_health = 90.0 * hp_scale
-		enemy.radius = 24.0
-		enemy.speed = 38.0
-		enemy.color = Color("5c2a7a")
-		enemy.contact_damage = 12.0 + elapsed / 40.0
-		enemy.xp_value = 4
-	elif elapsed > 45.0 and roll < 0.30:
-		enemy.max_health = 11.0 * hp_scale
-		enemy.radius = 10.0
-		enemy.speed = 105.0
-		enemy.color = Color("c9a227")
-		enemy.contact_damage = 4.0 + elapsed / 50.0
-	else:
-		enemy.max_health = 20.0 * hp_scale
-		enemy.speed = 52.0 + min(40.0, elapsed / 6.0)
-		enemy.contact_damage = 6.0 + elapsed / 40.0
+	enemy.setup(EnemyTypes.pick(elapsed), elapsed)
 	world.add_child(enemy)
 	enemy.global_position = player.global_position + Vector2.from_angle(randf() * TAU) * SPAWN_DISTANCE
 
 
-func _on_enemy_killed(at_position: Vector2, xp_value: int) -> void:
+func _on_enemy_killed(at_position: Vector2, xp_value: int, loot: bool) -> void:
 	kills += 1
 	_spawn_pickup("xp", xp_value, at_position)
+	if not loot:
+		return
 	var luck := player.get_luck()
 	var drop_mult := player.get_drop_mult()
 	var rolls := 1 + (1 if randf() < 0.05 * luck else 0)

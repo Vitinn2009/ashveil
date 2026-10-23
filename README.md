@@ -44,6 +44,7 @@ Roda uma partida simulada para os três heróis: telas, ataque, habilidades, inv
 
 - `tools/make_icons.gd` gera os PNGs de `assets/brand/` a partir dos SVGs.
 - `tools/render_characters.gd` renderiza os três heróis em `docs/personagens.png`.
+- `scenes/Bestiary.tscn` mostra os cinco inimigos lado a lado. Para ver, abra a cena no Godot e pressione F6.
 
 ## Documentação
 
