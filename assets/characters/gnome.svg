@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 160" width="128" height="160">
+  <defs>
+    <linearGradient id="pack" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a8703a"/>
+      <stop offset="1" stop-color="#5e3a1c"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4d070"/>
+      <stop offset="0.5" stop-color="#c8962c"/>
+      <stop offset="1" stop-color="#7c5a14"/>
+    </linearGradient>
+    <linearGradient id="coat" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2f7a78"/>
+      <stop offset="1" stop-color="#1d4d4c"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="153" rx="36" ry="6" fill="#000" opacity="0.3"/>
+  <!-- Ferramentas saindo da mochila -->
+  <line x1="30" y1="86" x2="22" y2="30" stroke="#1b1036" stroke-width="7" stroke-linecap="round"/>
+  <line x1="30" y1="86" x2="22" y2="30" stroke="#8b5a2b" stroke-width="4" stroke-linecap="round"/>
+  <path d="M8 34 Q22 18 38 30 Q22 26 8 34 Z" fill="#9aa5b5" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <line x1="42" y1="82" x2="48" y2="40" stroke="#1b1036" stroke-width="6" stroke-linecap="round"/>
+  <line x1="42" y1="82" x2="48" y2="40" stroke="#c4ccd8" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="48" cy="36" r="7" fill="none" stroke="#1b1036" stroke-width="5"/>
+  <circle cx="48" cy="36" r="7" fill="none" stroke="#c4ccd8" stroke-width="2.5"/>
+  <!-- Mochila -->
+  <rect x="10" y="70" width="42" height="58" rx="12" fill="url(#pack)" stroke="#1b1036" stroke-width="3"/>
+  <rect x="14" y="62" width="34" height="14" rx="7" fill="#c9a06a" stroke="#1b1036" stroke-width="2.5"/>
+  <path d="M10 90 L52 90" stroke="#3a2412" stroke-width="2.5"/>
+  <rect x="26" y="86" width="10" height="9" rx="2" fill="#f2b705" stroke="#1b1036" stroke-width="1.5"/>
+  <circle cx="14" cy="118" r="7" fill="#ffe27a" stroke="#1b1036" stroke-width="2"/>
+  <circle cx="14" cy="118" r="3.5" fill="#fff6c0"/>
+  <!-- Botas -->
+  <rect x="44" y="136" width="17" height="14" rx="5" fill="#4a2f18" stroke="#1b1036" stroke-width="3"/>
+  <rect x="68" y="136" width="17" height="14" rx="5" fill="#4a2f18" stroke="#1b1036" stroke-width="3"/>
+  <!-- Casaco -->
+  <path d="M40 142 L44 90 Q64 80 84 90 L88 142 Z" fill="url(#coat)" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="42" y="118" width="44" height="8" fill="#5e3a1c" stroke="#1b1036" stroke-width="2"/>
+  <rect x="58" y="117" width="12" height="10" fill="#f2b705" stroke="#1b1036" stroke-width="1.5"/>
+  <!-- Barba -->
+  <path d="M44 70 Q64 126 84 70 Q64 82 44 70 Z" fill="#f4e9d8" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M56 86 Q58 100 56 112 M64 88 Q66 104 64 118 M72 86 Q70 100 72 110" stroke="#c9bfa8" stroke-width="2" fill="none"/>
+  <!-- Braços -->
+  <ellipse cx="42" cy="104" rx="8" ry="13" fill="#1d4d4c" stroke="#1b1036" stroke-width="3"/>
+  <ellipse cx="86" cy="104" rx="8" ry="12" fill="#1d4d4c" stroke="#1b1036" stroke-width="3"/>
+  <!-- Arma de pirata: bacamarte com boca de sino -->
+  <path d="M84 112 L72 124 L80 128 L92 116 Z" fill="#4a2f18" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M88 106 L112 94 L124 86 L127 100 L114 106 L92 116 Z" fill="url(#brass)" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M116 90 L127 86 L127 100 L117 100 Z" fill="#2a1a08" opacity="0.75"/>
+  <circle cx="90" cy="112" r="5" fill="#e8c9a0" stroke="#1b1036" stroke-width="2.5"/>
+  <!-- Cabeça -->
+  <circle cx="64" cy="62" r="18" fill="#e8b890" stroke="#1b1036" stroke-width="3"/>
+  <ellipse cx="64" cy="67" rx="6" ry="5" fill="#d98e6e" stroke="#1b1036" stroke-width="2"/>
+  <ellipse cx="57" cy="57" rx="7" ry="3.4" fill="#f4e9d8" stroke="#1b1036" stroke-width="1.5"/>
+  <ellipse cx="72" cy="57" rx="7" ry="3.4" fill="#f4e9d8" stroke="#1b1036" stroke-width="1.5"/>
+  <circle cx="72" cy="61" r="2.4" fill="#1b1036"/>
+  <circle cx="57" cy="61" r="4.2" fill="#1b1036"/>
+  <line x1="46" y1="52" x2="82" y2="66" stroke="#1b1036" stroke-width="1.6"/>
+  <!-- Bandana pirata -->
+  <path d="M46 56 Q46 40 64 40 Q82 40 82 56 Q64 48 46 56 Z" fill="#c0302a" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M80 52 Q94 50 96 62 Q88 56 80 56 Z" fill="#c0302a" stroke="#1b1036" stroke-width="2.5" stroke-linejoin="round"/>
+  <g fill="#fff4e0"><circle cx="56" cy="46" r="1.8"/><circle cx="66" cy="44" r="1.8"/><circle cx="74" cy="48" r="1.8"/></g>
+</svg>

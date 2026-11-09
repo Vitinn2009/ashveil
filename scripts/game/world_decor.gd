@@ -11,8 +11,9 @@ extends Node
 ## "rasteiros" (flores, tufos, terra) ficam abaixo de todos.
 
 const CHUNK_SIZE := 640.0
-const LOAD_RADIUS := 2
-const UNLOAD_RADIUS := 3
+## Pedaços de cenário carregados em volta do herói: 3x3 (1920 px) já cobrem a tela inteira com folga.
+const LOAD_RADIUS := 1
+const UNLOAD_RADIUS := 2
 const SAFE_RADIUS := 150.0
 const GROUND_Z := -50
 const CELLS := 4

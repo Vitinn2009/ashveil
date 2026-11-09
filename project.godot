@@ -14,6 +14,9 @@ config/icon="res://assets/brand/icon.svg"
 
 EventBus="*res://scripts/autoload/event_bus.gd"
 Session="*res://scripts/autoload/session.gd"
+Settings="*res://scripts/autoload/settings.gd"
+Sound="*res://scripts/autoload/sound.gd"
+Updater="*res://scripts/autoload/updater.gd"
 
 [display]
 
@@ -21,7 +24,7 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-window/handheld/orientation=6
+window/handheld/orientation=4
 
 [input_devices]
 

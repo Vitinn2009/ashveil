@@ -2,7 +2,11 @@ class_name Heroes
 extends RefCounted
 
 ## Catálogo dos heróis jogáveis. `attack` define o estilo de ataque:
-## "magic" e "arrow" disparam projéteis, "melee" golpeia em área ao redor.
+## "magic" e "arrow" disparam projéteis, "melee" golpeia em leque à frente e
+## "blunderbuss" dispara 4 fragmentos de uma vez.
+## `accuracy` é a chance de o golpe básico acertar (Destreza aumenta). `unlock` é a habilidade que só é liberada no nível indicado.
+
+const UNLOCK_LEVEL := 20
 
 const DATA := {
 	"mage": {
@@ -13,14 +17,20 @@ const DATA := {
 		"color": Color("8a6bff"),
 		"attack": "magic",
 		"health": 70.0,
-		"speed": 200.0,
+		"energy": 140.0,
+		"speed": 162.0,
 		"defense": 0.0,
 		"damage": 14.0,
 		"interval": 0.75,
+		"accuracy": 0.8,
 		"range": 340.0,
 		"projectile_speed": 440.0,
 		"projectile_color": Color("6ec6ff"),
 		"skills": ["freeze", "fire", "wind"],
+		"unlock": {"id": "lightning", "level": UNLOCK_LEVEL},
+		"bag_bonus": 0,
+		"base_luck": 0,
+		"base_dex": 1,
 	},
 	"archer": {
 		"name": "Arqueiro",
@@ -30,14 +40,20 @@ const DATA := {
 		"color": Color("5fae6e"),
 		"attack": "arrow",
 		"health": 95.0,
-		"speed": 235.0,
+		"energy": 100.0,
+		"speed": 146.0,
+		"max_speed": 186.0,
 		"defense": 2.0,
 		"damage": 11.0,
-		"interval": 0.55,
+		"interval": 0.9,
+		"accuracy": 0.62,
 		"range": 380.0,
 		"projectile_speed": 660.0,
 		"projectile_color": Color("f4e9d8"),
 		"skills": ["double", "haste"],
+		"unlock": {"id": "fire_arrows", "level": UNLOCK_LEVEL},
+		"bag_bonus": 0,
+		"base_luck": 0,
 	},
 	"warrior": {
 		"name": "Guerreiro",
@@ -47,21 +63,59 @@ const DATA := {
 		"color": Color("c4ccd8"),
 		"attack": "melee",
 		"health": 150.0,
-		"speed": 215.0,
+		"energy": 90.0,
+		"speed": 167.0,
 		"defense": 6.0,
 		"damage": 18.0,
 		"interval": 0.7,
+		"accuracy": 0.88,
 		"range": 100.0,
 		"projectile_speed": 0.0,
 		"projectile_color": Color("e8edf5"),
 		"skills": ["slash", "shield"],
+		"unlock": {"id": "ground_slam", "level": UNLOCK_LEVEL},
+		"bag_bonus": 0,
+		"base_luck": 0,
+	},
+	"gnome": {
+		"name": "Gnomo",
+		"title": "Velho engenheiro pirata",
+		"description": "Lento, mas cheio de ferramentas. Seu bacamarte solta 4 fragmentos, a mochila carrega mais itens e a sorte é maior.",
+		"art": "res://assets/characters/gnome.svg",
+		"color": Color("c9954a"),
+		"attack": "blunderbuss",
+		"health": 85.0,
+		"energy": 110.0,
+		"speed": 135.0,
+		"defense": 1.0,
+		"damage": 7.0,
+		"interval": 0.9,
+		"accuracy": 0.7,
+		"range": 290.0,
+		"projectile_speed": 560.0,
+		"projectile_color": Color("f4d58a"),
+		"skills": ["bomb", "paralysis"],
+		"unlock": {"id": "bomb_rain", "level": UNLOCK_LEVEL},
+		"bag_bonus": 8,
+		"base_luck": 3,
 	},
 }
 
 
 static func ids() -> Array:
-	return ["mage", "archer", "warrior"]
+	return ["mage", "archer", "warrior", "gnome"]
 
 
 static func get_hero(id: String) -> Dictionary:
 	return DATA.get(id, DATA["warrior"])
+
+
+## Todas as habilidades do herói em ordem: as liberadas desde o início e,
+## por último, a que destrava no nível 20. Cada entrada: {id, unlock_level}.
+static func skill_entries(hero: Dictionary) -> Array:
+	var entries: Array = []
+	for id in hero["skills"]:
+		entries.append({"id": id, "unlock_level": 0})
+	var unlock: Dictionary = hero["unlock"]
+	entries.append({"id": unlock["id"], "unlock_level": unlock["level"]})
+	return entries

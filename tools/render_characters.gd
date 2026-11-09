@@ -3,7 +3,7 @@ extends SceneTree
 ## Renderiza os três heróis lado a lado em docs/personagens.png. Rodar com:
 ##   godot --headless --path . --script res://tools/render_characters.gd
 
-const HEROES := ["mage", "archer", "warrior"]
+const HEROES := ["mage", "archer", "warrior", "gnome"]
 const SCALE := 2.5
 
 

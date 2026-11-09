@@ -1,4 +1,4 @@
-class_name VirtualJoystick
+class_name TouchJoystick
 extends Control
 
 ## Joystick virtual: aparece onde o dedo toca na metade esquerda da tela.

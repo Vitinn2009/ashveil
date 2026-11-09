@@ -10,6 +10,8 @@ var radius := 6.0
 var pierce := 0
 var burn_ticks := 0
 var burn_damage := 0.0
+## Tipo de golpe nos inimigos: "hit" (pode errar, pelo acerto do herói) ou "skill" (nunca erra, como os tiros do pet).
+var hit_kind := "hit"
 var _already_hit: Array = []
 
 
@@ -24,12 +26,19 @@ func _physics_process(delta: float) -> void:
 	if lifetime <= 0.0:
 		queue_free()
 		return
-	for node in get_tree().get_nodes_in_group("enemies"):
-		var enemy := node as Enemy
-		if enemy == null or _already_hit.has(enemy):
+	var nodes := Enemy.snapshot(get_tree())
+	var positions := Enemy.snapshot_positions()
+	var radii := Enemy.snapshot_radii()
+	var here := global_position
+	for i in nodes.size():
+		var reach := radius + radii[i]
+		if here.distance_squared_to(positions[i]) > reach * reach:
 			continue
-		if global_position.distance_to(enemy.global_position) <= radius + enemy.radius:
-			enemy.take_damage(damage)
+		var enemy: Enemy = nodes[i]
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or _already_hit.has(enemy) or enemy.is_intangible():
+			continue
+		if global_position.distance_squared_to(enemy.global_position) <= reach * reach:
+			enemy.take_damage(damage, hit_kind)
 			if burn_ticks > 0 and not enemy.is_queued_for_deletion():
 				enemy.apply_burn(burn_ticks, burn_damage)
 			_already_hit.append(enemy)
@@ -41,6 +50,18 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	match style:
+		"fragment":
+			# Fragmento do bacamarte: bolinha quente com um rastro curto.
+			draw_line(Vector2(-radius * 2.6, 0), Vector2.ZERO, Color(color, 0.45), radius * 1.2)
+			draw_circle(Vector2.ZERO, radius, Color("c9962c"))
+			draw_circle(Vector2.ZERO, radius * 0.6, color)
+		"fire_arrow":
+			draw_circle(Vector2(-16, 0), 9.0, Color(color, 0.3))
+			draw_line(Vector2(-16, 0), Vector2(6, 0), Brand.NIGHT, 5.0)
+			draw_line(Vector2(-16, 0), Vector2(6, 0), Color("c9a06a"), 2.5)
+			draw_colored_polygon(PackedVector2Array([Vector2(5, -5), Vector2(16, 0), Vector2(5, 5)]), color)
+			draw_circle(Vector2(-18, 0), 4.5, Color("ffd36b"))
+			draw_circle(Vector2(-24, 0), 3.0, Color(color, 0.6))
 		"slash":
 			# Meia-lua de espada: arco largo voltado para a frente.
 			var center := Vector2(-radius * 0.45, 0)

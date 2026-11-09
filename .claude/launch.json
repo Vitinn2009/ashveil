@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ashveil-web",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tools/serve_web.ps1", "-Root", "export/play", "-Port", "8060"],
+      "port": 8060
+    }
+  ]
+}

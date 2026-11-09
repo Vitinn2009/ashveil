@@ -18,3 +18,7 @@ Thumbs.db
 .vscode/
 .idea/
 export/*/
+
+# Builds exportados (o APK vai anexado na release)
+export/
+.claude/settings.local.json

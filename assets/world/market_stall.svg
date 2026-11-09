@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a5a32"/>
+      <stop offset="1" stop-color="#5a3820"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9483a"/>
+      <stop offset="1" stop-color="#a02e24"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="120" cy="190" rx="100" ry="9" fill="#000" opacity="0.3"/>
+  <!-- Postes -->
+  <rect x="26" y="60" width="10" height="126" fill="url(#wood)" stroke="#2a1a0e" stroke-width="2"/>
+  <rect x="204" y="60" width="10" height="126" fill="url(#wood)" stroke="#2a1a0e" stroke-width="2"/>
+  <!-- Toldo listrado -->
+  <path d="M14 66 L40 14 L200 14 L226 66 Z" fill="url(#red)" stroke="#5a1a14" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="#f6ecd8">
+    <path d="M40 14 L63 14 L58 66 L30 66 Z"/><path d="M86 14 L109 14 L109 66 L82 66 Z"/>
+    <path d="M132 14 L155 14 L160 66 L136 66 Z"/><path d="M178 14 L200 14 L214 66 L188 66 Z"/>
+  </g>
+  <path d="M14 66 Q27 80 40 66 Q53 80 66 66 Q79 80 92 66 Q105 80 118 66 Q131 80 144 66 Q157 80 170 66 Q183 80 196 66 Q209 80 226 66 Z" fill="url(#red)" stroke="#5a1a14" stroke-width="2"/>
+  <!-- Balcão -->
+  <rect x="18" y="128" width="204" height="58" fill="url(#wood)" stroke="#2a1a0e" stroke-width="3"/>
+  <rect x="14" y="120" width="212" height="12" rx="3" fill="#a8744a" stroke="#2a1a0e" stroke-width="3"/>
+  <g stroke="#2a1a0e" stroke-width="2" opacity="0.5"><line x1="70" y1="132" x2="70" y2="186"/><line x1="120" y1="132" x2="120" y2="186"/><line x1="170" y1="132" x2="170" y2="186"/></g>
+  <!-- Mercadorias -->
+  <path d="M40 120 L40 100 Q40 94 46 94 Q52 94 52 100 L52 120 Z" fill="#e0452d" stroke="#1b1036" stroke-width="2"/>
+  <rect x="42" y="86" width="8" height="10" fill="#efe2c8" stroke="#1b1036" stroke-width="1.5"/>
+  <path d="M62 120 L62 102 Q62 96 68 96 Q74 96 74 102 L74 120 Z" fill="#4aa3ff" stroke="#1b1036" stroke-width="2"/>
+  <rect x="64" y="88" width="8" height="10" fill="#efe2c8" stroke="#1b1036" stroke-width="1.5"/>
+  <ellipse cx="108" cy="112" rx="18" ry="9" fill="#d9a05a" stroke="#1b1036" stroke-width="2"/>
+  <ellipse cx="108" cy="109" rx="12" ry="5" fill="#ecc27a"/>
+  <ellipse cx="140" cy="113" rx="12" ry="7" fill="#c98a4a" stroke="#1b1036" stroke-width="2"/>
+  <line x1="176" y1="120" x2="196" y2="82" stroke="#1b1036" stroke-width="6" stroke-linecap="round"/>
+  <line x1="176" y1="120" x2="196" y2="82" stroke="#d6dde8" stroke-width="3" stroke-linecap="round"/>
+  <rect x="170" y="108" width="14" height="4" fill="#f2b705" stroke="#1b1036" stroke-width="1.5" transform="rotate(-25 177 110)"/>
+  <circle cx="208" cy="104" r="12" fill="#2f5fb3" stroke="#1b1036" stroke-width="2.5"/>
+  <circle cx="208" cy="104" r="4" fill="#f2b705"/>
+  <!-- Placa -->
+  <rect x="86" y="146" width="68" height="26" rx="4" fill="#d8c08a" stroke="#2a1a0e" stroke-width="2.5"/>
+  <circle cx="106" cy="159" r="7" fill="#f2b705" stroke="#8a6a08" stroke-width="2"/>
+  <circle cx="126" cy="159" r="7" fill="#f2b705" stroke="#8a6a08" stroke-width="2"/>
+  <circle cx="142" cy="159" r="5" fill="#f2b705" stroke="#8a6a08" stroke-width="2"/>
+</svg>

@@ -94,6 +94,41 @@ Implementado:
 Ainda não implementado: persistência (save), meta-progressão, biomas, chefes, missões, áudio, mais heróis.
 O ouro e o inventário valem só para a partida atual.
 
+## Castelo e mercado
+
+Depois de cada missão (vitória ou derrota) o herói volta ao castelo. O fluxo é: menu, escolha do herói, castelo, missão, castelo.
+- **Mercado:** abas de Poções, Comida, Armas, Armaduras, Acessórios e Vender. Poções e comidas ficam sempre à venda. Os equipamentos (3 por aba) são sorteados a cada missão cumprida e melhoram com o número de missões; o mercado não vende lendários. Um item custa 4x o que rende ao ser vendido.
+- **Comidas:** Pão (cura 25%), Carne assada (cura 60%) e Sopa de cogumelo (+25% de velocidade de ataque por 30s). A poção de vida cura 40%. Nada é gasto se não tiver efeito.
+- **Vender:** a aba lista a mochila, com Equipar e Vender, e o botão "Vender comuns". Se a mochila está cheia durante a missão, o item novo é vendido na hora.
+- **Persistência:** ouro, poções, comidas, mochila, equipamentos e missões cumpridas ficam salvos no disco (`user://ashveil_save.json`). O inventário é o mesmo para todos os heróis.
+
+## Energia e habilidades travadas
+
+- Cada habilidade gasta energia (o custo aparece no botão) além da recarga. A energia volta a 6 por segundo. Máximos: Mago 140, Gnomo 110, Arqueiro 100, Guerreiro 90.
+- Cada herói tem uma habilidade que só é liberada no **nível 20**, mostrada com cadeado até lá:
+  - **Raio (Mago):** raios caem sobre até 6 inimigos, com dano em área (40%) ao redor de cada um.
+  - **Flechas de Fogo (Arqueiro):** 5 flechas em leque que queimam o que atravessam.
+  - **Pancada no Chão (Guerreiro):** dano em área em volta do herói, 1s de paralisia e empurrão.
+  - **Chuva de Bombas (Gnomo):** 5 bombas de fogo, uma sobre cada inimigo próximo.
+
+## Gnomo
+
+Velho engenheiro pirata: **mais lento** (165), com **mais sorte** (+3 pontos de Sorte de partida) e **mochila de 20 espaços** (os outros têm 12). O bacamarte solta **4 fragmentos** em leque por disparo.
+- **Bomba de Fogo:** explode em área e queima o dobro (6 vezes, contra 3 do Fogo do Mago).
+- **Poção Paralisante:** paralisa os inimigos na área por 2s.
+
+## Inimigos novos
+
+| Tipo | Aparece | Característica |
+|---|---|---|
+| Aranha Venenosa | 55s | Mantém distância e cospe teias que deixam o herói 50% mais lento por 2s. |
+| Lobo Selvagem | 85s | Avisa com uma linha vermelha e depois dá uma investida rápida em linha reta. |
+| Fantasma | 115s | Alterna entre sólido (2,6s) e etéreo (1,4s). Etéreo, ignora todo dano e não pode ser alvo. |
+| Cogumelo Tóxico | 130s | Deixa nuvens venenosas pelo caminho e uma grande ao morrer. |
+| Necromante | 150s | Mantém distância e invoca 2 caveirinhas a cada 7s (no máximo 4 vivas). |
+
+A Caveirinha só aparece invocada: é rápida e frágil e não solta XP nem itens.
+
 ## Cenário
 
 O jogo acontece num campo de grama infinito, sem fundo roxo:

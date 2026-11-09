@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520">
+  <defs>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9b4aa"/>
+      <stop offset="1" stop-color="#7d7a74"/>
+    </linearGradient>
+    <linearGradient id="stoneDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9c978e"/>
+      <stop offset="1" stop-color="#66635e"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d04a3a"/>
+      <stop offset="1" stop-color="#8a2a22"/>
+    </linearGradient>
+    <linearGradient id="gate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a1c"/>
+      <stop offset="1" stop-color="#1c120a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="450" cy="500" rx="400" ry="18" fill="#000" opacity="0.3"/>
+  <!-- Muralha -->
+  <rect x="40" y="320" width="820" height="170" fill="url(#stoneDark)"/>
+  <g fill="url(#stoneDark)">
+    <rect x="40" y="298" width="30" height="26"/><rect x="90" y="298" width="30" height="26"/><rect x="140" y="298" width="30" height="26"/>
+    <rect x="190" y="298" width="30" height="26"/><rect x="240" y="298" width="30" height="26"/>
+    <rect x="630" y="298" width="30" height="26"/><rect x="680" y="298" width="30" height="26"/><rect x="730" y="298" width="30" height="26"/>
+    <rect x="780" y="298" width="30" height="26"/><rect x="830" y="298" width="30" height="26"/>
+  </g>
+  <!-- Torre esquerda -->
+  <rect x="120" y="200" width="110" height="290" fill="url(#stone)"/>
+  <path d="M104 204 L175 64 L246 204 Z" fill="url(#roof)"/>
+  <path d="M175 64 L246 204 L175 204 Z" fill="#000" opacity="0.18"/>
+  <!-- Torre direita -->
+  <rect x="670" y="200" width="110" height="290" fill="url(#stone)"/>
+  <path d="M654 204 L725 64 L796 204 Z" fill="url(#roof)"/>
+  <path d="M725 64 L796 204 L725 204 Z" fill="#000" opacity="0.18"/>
+  <!-- Torre central (keep) -->
+  <rect x="330" y="150" width="240" height="340" fill="url(#stone)"/>
+  <g fill="url(#stone)">
+    <rect x="330" y="124" width="36" height="32"/><rect x="384" y="124" width="36" height="32"/><rect x="438" y="124" width="36" height="32"/>
+    <rect x="492" y="124" width="36" height="32"/><rect x="534" y="124" width="36" height="32"/>
+  </g>
+  <path d="M390 150 L450 20 L510 150 Z" fill="url(#roof)"/>
+  <path d="M450 20 L510 150 L450 150 Z" fill="#000" opacity="0.18"/>
+  <!-- Bandeiras -->
+  <line x1="450" y1="20" x2="450" y2="-8" stroke="#3a2a1c" stroke-width="4"/>
+  <path d="M450 -6 L492 4 L450 14 Z" fill="#f2b705" stroke="#8a6a08" stroke-width="2"/>
+  <line x1="175" y1="64" x2="175" y2="40" stroke="#3a2a1c" stroke-width="4"/>
+  <path d="M175 40 L210 48 L175 56 Z" fill="#c0302a"/>
+  <line x1="725" y1="64" x2="725" y2="40" stroke="#3a2a1c" stroke-width="4"/>
+  <path d="M725 40 L760 48 L725 56 Z" fill="#c0302a"/>
+  <!-- Portão -->
+  <path d="M390 490 L390 372 Q450 308 510 372 L510 490 Z" fill="url(#gate)" stroke="#4a463f" stroke-width="8"/>
+  <g stroke="#6a6258" stroke-width="5">
+    <line x1="420" y1="350" x2="420" y2="490"/><line x1="450" y1="336" x2="450" y2="490"/><line x1="480" y1="350" x2="480" y2="490"/>
+    <line x1="392" y1="400" x2="508" y2="400"/><line x1="392" y1="440" x2="508" y2="440"/>
+  </g>
+  <!-- Janelas acesas -->
+  <g fill="#ffd36b">
+    <path d="M160 250 L160 230 Q175 214 190 230 L190 250 Z"/>
+    <path d="M710 250 L710 230 Q725 214 740 230 L740 250 Z"/>
+    <path d="M425 230 L425 200 Q450 176 475 200 L475 230 Z"/>
+    <path d="M160 330 L160 310 Q175 294 190 310 L190 330 Z"/>
+    <path d="M710 330 L710 310 Q725 294 740 310 L740 330 Z"/>
+  </g>
+  <!-- Pedras e sombras -->
+  <g stroke="#55524c" stroke-width="2" opacity="0.5" fill="none">
+    <path d="M330 200 H570 M330 260 H570 M330 320 H570"/><path d="M120 260 H230 M120 340 H230 M670 260 H780 M670 340 H780"/>
+    <path d="M40 360 H860 M40 420 H390 M510 420 H860"/>
+  </g>
+  <rect x="330" y="150" width="14" height="340" fill="#000" opacity="0.1"/>
+</svg>
