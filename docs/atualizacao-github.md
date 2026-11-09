@@ -26,6 +26,6 @@ consulta na hora.
 - **Assine sempre com a mesma chave.** O Android só instala por cima se a assinatura for a mesma. Hoje o
   projeto usa o `debug.keystore` do Godot: não apague esse arquivo.
 - O jogo precisa da permissão de internet (já ligada no export).
-- A primeira instalação que tiver o atualizador precisa ser feita à mão (esta versão, 0.33.0).
+- A primeira instalação que tiver o atualizador precisa ser feita à mão (a 0.33.0 ou mais nova).
   Dali em diante as próximas chegam pelo aviso.
 - A versão web não usa isso: ela é atualizada quando o site é republicado.

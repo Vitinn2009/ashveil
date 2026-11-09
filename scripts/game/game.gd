@@ -7,6 +7,9 @@ const SPAWN_DISTANCE := 560.0
 const SPAWN_EDGE_MARGIN := 320.0
 const MENU_SCENE := "res://scenes/Main.tscn"
 const CASTLE_SCENE := "res://scenes/Castle.tscn"
+## Arena PvP: raio do campo de duelo e tempo máximo da luta (no fim, vence quem tem mais vida).
+const ARENA_RADIUS := 640.0
+const ARENA_TIME := 150.0
 ## A cada ATTRIBUTE_POPUP_EVERY níveis abre o popup de atributos permanentes (pausa o jogo) com
 ## ATTRIBUTE_POINTS_PER_POPUP pontos para gastar.
 const ATTRIBUTE_POPUP_EVERY := 5
@@ -140,6 +143,8 @@ var mission_name := ""
 var mission_duration := 240.0
 var mission_reward := 50
 var boss: Enemy
+## O rival do duelo na arena PvP (vazio nas missões normais).
+var rival_enemy: Enemy
 var boss_spawned := false
 var boss_dead := false
 var combo := 0
@@ -161,7 +166,7 @@ var _toast_tween: Tween
 
 func _ready() -> void:
 	stage_index = Session.stage_index
-	stage = Stages.get_stage(stage_index)
+	stage = Stages.arena_stage() if Session.pvp else Stages.get_stage(stage_index)
 	mission_name = stage["name"]
 	mission_duration = stage["duration"]
 	mission_reward = stage["reward"]
@@ -171,7 +176,10 @@ func _ready() -> void:
 	world.y_sort_enabled = true
 	world.modulate = stage["tint"]
 	add_child(world)
-	world.add_child(MapBorder.new())
+	var border := MapBorder.new()
+	if Session.pvp:
+		border.radius = ARENA_RADIUS
+	world.add_child(border)
 
 	ground = GroundLayer.new()
 	world.add_child(ground)
@@ -225,7 +233,10 @@ func _ready() -> void:
 	_apply_permanent()
 
 	_apply_auto_attack()
-	_spawn_start_jars()
+	if Session.pvp:
+		_start_duel()
+	else:
+		_spawn_start_jars()
 	_rune_rng.randomize()
 	xp_bar.max_value = xp_to_next
 	_update_hud()
@@ -236,7 +247,10 @@ func _process(delta: float) -> void:
 		return
 	elapsed += delta
 	_tick_combo(delta)
-	_tick_jars(delta)
+	if Session.pvp:
+		_tick_duel(delta)
+	else:
+		_tick_jars(delta)
 	_update_bag_warning()
 	_update_shake(delta)
 	weapon.manual_held = attack_button.held or Input.is_key_pressed(KEY_SPACE)
@@ -374,6 +388,9 @@ func _on_boss_died(boss_name: String) -> void:
 ## alguns segundos para ver tudo o que foi para ele (os espólios do chão, o XP, o nível e as escolhas de
 ## atributo) antes da tela de vitória.
 func _on_mission_complete(immediate := true) -> void:
+	if Session.pvp:
+		_on_duel_won()
+		return
 	mission_complete = true
 	Engine.time_scale = 1.0
 	if immediate:
@@ -1261,6 +1278,9 @@ func _on_player_health_changed(current: float, maximum: float) -> void:
 
 
 func _on_player_died() -> void:
+	if Session.pvp:
+		_on_duel_lost()
+		return
 	game_over = true
 	_collect_ground_drops()
 	Session.save_game()
@@ -1268,6 +1288,72 @@ func _on_player_died() -> void:
 	Engine.time_scale = 1.0
 	gameover_label.text = "%s caiu em %s\nTempo: %s\nAbates: %d\nNível: %d\nOuro: %d" % [
 		player.hero["name"], mission_name, _format_time(), kills, level, player.inventory.gold]
+	gameover_panel.show()
+	get_tree().paused = true
+
+
+# --- Arena PvP -------------------------------------------------------------------------------
+
+## Começa o duelo: o rival (um herói controlado pela IA) nasce do lado oposto da arena.
+func _start_duel() -> void:
+	spawning = false
+	boss_spawned = true
+	var rival := Enemy.new()
+	rival.setup_rival(Session.pvp_rival, player, Session.pvp_difficulty, ARENA_RADIUS)
+	world.add_child(rival)
+	rival.global_position = player.global_position + Vector2(ARENA_RADIUS * 0.55, 0.0)
+	# A barra da missão vira a vida do rival (a mesma que o chefe usa).
+	boss = rival
+	rival_enemy = rival
+	player.global_position = Vector2(-ARENA_RADIUS * 0.55, 0.0)
+	rival.global_position = Vector2(ARENA_RADIUS * 0.55, 0.0)
+	var setting: Dictionary = RivalBrain.DIFFICULTY.get(Session.pvp_difficulty, RivalBrain.DIFFICULTY["normal"])
+	_toast("DUELO: %s (%s)" % [Heroes.get_hero(Session.pvp_rival)["name"], setting["name"]], Color("ff5a3c"))
+
+
+## Prende os dois lutadores dentro da arena e decide o duelo se o tempo acabar (vence quem tem mais vida).
+func _tick_duel(_delta: float) -> void:
+	player.global_position = player.global_position.limit_length(ARENA_RADIUS)
+	if is_instance_valid(rival_enemy) and not rival_enemy.is_queued_for_deletion():
+		rival_enemy.global_position = rival_enemy.global_position.limit_length(ARENA_RADIUS)
+	if elapsed >= ARENA_TIME and not game_over and not mission_complete and is_instance_valid(rival_enemy):
+		var player_ratio := player.health / maxf(player.max_health, 1.0)
+		var rival_ratio := rival_enemy.health / maxf(rival_enemy.max_health, 1.0)
+		if player_ratio > rival_ratio:
+			rival_enemy.take_damage(1e9, "dot")
+		else:
+			player.take_damage(player.max_health * 10.0, "dot")
+
+
+## Vitória no duelo: ouro pela dificuldade e pelo nível, e o placar sobe.
+func _on_duel_won() -> void:
+	mission_complete = true
+	game_over = true
+	Engine.time_scale = 1.0
+	var setting: Dictionary = RivalBrain.DIFFICULTY.get(Session.pvp_difficulty, RivalBrain.DIFFICULTY["normal"])
+	var reward := int(round((100.0 + level * 8.0) * float(setting["reward"])))
+	player.inventory.add_gold(reward)
+	Session.pvp_wins += 1
+	Session.save_game()
+	var ratio := int(round(player.health / maxf(player.max_health, 1.0) * 100.0))
+	victory_label.text = "Vitória na arena!\nContra: %s (%s)\nTempo: %s · Vida restante: %d%%\nOuro: +%d\nPlacar: %d vitórias · %d derrotas" % [
+		Heroes.get_hero(Session.pvp_rival)["name"], setting["name"], _format_time(), ratio, reward, Session.pvp_wins, Session.pvp_losses]
+	next_button.visible = false
+	_show_victory()
+
+
+func _on_duel_lost() -> void:
+	game_over = true
+	Engine.time_scale = 1.0
+	Session.pvp_losses += 1
+	Session.save_game()
+	choice_strip.hide()
+	var setting: Dictionary = RivalBrain.DIFFICULTY.get(Session.pvp_difficulty, RivalBrain.DIFFICULTY["normal"])
+	var rival_ratio := 0
+	if is_instance_valid(rival_enemy):
+		rival_ratio = int(round(rival_enemy.health / maxf(rival_enemy.max_health, 1.0) * 100.0))
+	gameover_label.text = "Derrota na arena\nContra: %s (%s)\nTempo: %s · o rival ficou com %d%% da vida\nPlacar: %d vitórias · %d derrotas\n(Use \"Jogar novamente\" para a revanche)" % [
+		Heroes.get_hero(Session.pvp_rival)["name"], setting["name"], _format_time(), rival_ratio, Session.pvp_wins, Session.pvp_losses]
 	gameover_panel.show()
 	get_tree().paused = true
 
@@ -1537,6 +1623,8 @@ func _update_hud() -> void:
 	stamina_bar.value = player.stamina
 	stamina_bar.label_text = "Vitalidade" if player.fatigue_factor() >= 1.0 else "Cansado: %d%% de velocidade" % int(round(player.fatigue_factor() * 100.0))
 	info_label.text = "Abates %d (meta %d)" % [kills, stage["kill_goal"]]
+	if Session.pvp:
+		info_label.text = "Duelo na arena · tempo %s · vitórias %d / derrotas %d" % [_format_clock(ARENA_TIME - elapsed), Session.pvp_wins, Session.pvp_losses]
 	if combo >= 3:
 		info_label.text += "  ·  COMBO x%d  (+%d%% XP)" % [combo, int(round((combo_multiplier() - 1.0) * 100.0))]
 	for id in skill_buttons:

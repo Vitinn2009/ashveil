@@ -101,6 +101,7 @@ func _run() -> void:
 	await _test_thief()
 	await _test_shade()
 	await _test_new_enemies_and_insane()
+	await _test_pvp_arena()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -653,7 +654,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.33.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.34.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -665,6 +666,72 @@ func _test_new_enemies_and_insane() -> void:
 	menu.queue_free()
 
 
+
+func _test_pvp_arena() -> void:
+	print("[arena PvP]")
+	await _new_game()
+	_game.queue_free()
+	_game = null
+	await _frames(2)
+	_check(RivalBrain.DIFFICULTY["hard"]["hp"] > RivalBrain.DIFFICULTY["normal"]["hp"] and RivalBrain.DIFFICULTY["easy"]["hp"] < RivalBrain.DIFFICULTY["normal"]["hp"], "a dificuldade muda a vida do rival")
+	for rival_id in Heroes.ids():
+		Session.reset_progress()
+		Session.hero_id = "warrior" if rival_id != "warrior" else "mage"
+		Session.pvp = true
+		Session.pvp_rival = rival_id
+		Session.pvp_difficulty = "normal"
+		var game: Node = load("res://scenes/Game.tscn").instantiate()
+		add_child(game)
+		await _frames(4)
+		var player: Player = game.player
+		player.max_health = 1.0e7
+		player.health = 1.0e7
+		player.accuracy_bonus = 1.0
+		game.weapon.process_mode = Node.PROCESS_MODE_DISABLED
+		var rival: Enemy = game.rival_enemy
+		_check(rival != null and rival.kind == "rival" and rival.brain != null, "%s: o rival nasce na arena" % rival_id)
+		if rival == null:
+			game.queue_free()
+			continue
+		rival.brain.skill_ids = Heroes.get_hero(rival_id)["skills"].duplicate()
+		_check(absf(rival.max_health - player.get_max_health() * 1.0) < 1.0 or player.max_health == 1.0e7, "%s: a vida do rival acompanha a do herói" % rival_id)
+		_check(rival.global_position.distance_to(player.global_position) > 500.0, "%s: começam em lados opostos" % rival_id)
+		_check(rival.brain.skill_ids.size() >= 2, "%s: o rival tem as habilidades do herói dele" % rival_id)
+		var before: float = player.health
+		await _ticks(900)
+		_check(is_instance_valid(rival) and rival.global_position.length() <= game.ARENA_RADIUS + 2.0, "%s: o rival fica dentro da arena" % rival_id)
+		_check(player.health < before, "%s: o rival machuca o herói (%d de dano em 15 s)" % [rival_id, int(before - player.health)])
+		_check(rival.brain.casts >= 1, "%s: o rival usa habilidades (%d usos, última: %s)" % [rival_id, rival.brain.casts, rival.brain.last_skill])
+		rival.take_damage(1.0e9, "dot")
+		await _ticks(90)
+		_check(game.game_over and game.mission_complete and game.victory_panel.visible, "%s: derrotar o rival é vitória (placar %d)" % [rival_id, Session.pvp_wins])
+		game.queue_free()
+		get_tree().paused = false
+		await _frames(2)
+	# (o placar é zerado a cada rodada pelo reset do progresso)
+	# Derrota.
+	Session.pvp_rival = "mage"
+	var lost: Node = load("res://scenes/Game.tscn").instantiate()
+	add_child(lost)
+	await _frames(4)
+	lost.player.take_damage(1.0e9, "dot")
+	await _frames(2)
+	_check(lost.game_over and lost.gameover_panel.visible and Session.pvp_losses == 1, "morrer na arena é derrota e conta no placar")
+	lost.queue_free()
+	get_tree().paused = false
+	await _frames(2)
+	# A janela da arena.
+	Session.hero_id = "mage"
+	var popup := ArenaPopup.new()
+	add_child(popup)
+	await _frames(2)
+	_check(popup.rival != "mage" and popup._rival_buttons.size() == 4 and popup._difficulty_buttons.size() == 3, "a janela da arena sugere um rival diferente e tem 4 heróis e 3 dificuldades")
+	popup.choose_rival("gnome")
+	popup.choose_difficulty("hard")
+	_check(popup.rival == "gnome" and popup.difficulty == "hard", "escolher rival e dificuldade")
+	popup.queue_free()
+	Session.pvp = false
+	await _frames(2)
 
 func _test_totem() -> void:
 	print("[totem curandeiro]")

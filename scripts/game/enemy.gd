@@ -55,7 +55,7 @@ const BLOCK_MULT := 0.35
 ## Velocidade do empurrão que o golpe crítico dá no inimigo (px/s; ele desliza ~80 px).
 const CRIT_KNOCKBACK := 460.0
 ## Quanto a barra de vida sobe para não ficar atrás de chifres, capuz ou chapéu.
-const BAR_LIFT := {"bat": 0.9, "brute": 0.6, "necromancer": 0.5, "mushroom": 0.6, "thief": 0.6, "totem": 0.5, "shade": 0.5}
+const BAR_LIFT := {"bat": 0.9, "brute": 0.6, "necromancer": 0.5, "mushroom": 0.6, "thief": 0.6, "totem": 0.5, "shade": 0.5, "rival": 2.2}
 
 var kind := "slime"
 var speed := 70.0
@@ -129,6 +129,9 @@ var _boss_timer := 5.0
 var _boss_telegraph := -1.0
 var _boss_power := 1.0
 var _boss_volley := 3.5
+## Rival da arena PvP: o cérebro da IA e o sprite do herói que ele encarna.
+var brain: RivalBrain
+var _rival_sprite: Sprite2D
 ## Estado das habilidades dos monstros novos (cada um usa só o que precisa).
 var _ab_state := ""
 var _ab_time := 2.0
@@ -270,6 +273,12 @@ func _physics_process(delta: float) -> void:
 			_move_gargoyle(direction, distance, delta)
 		"worm":
 			_move_worm(direction, distance, delta)
+		"rival":
+			if brain != null:
+				brain.tick(delta, direction, distance)
+			if _rival_sprite != null:
+				_rival_sprite.modulate = Color(1.0, 0.55, 0.55) if _hit_flash > 0.0 else Color.WHITE
+				_rival_sprite.position.y = Player.SPRITE_BASE_Y + sin(_clock * 6.0) * 1.2
 		_:
 			_move_chase(direction, distance, delta)
 	if shield_time > 0.0:
@@ -669,6 +678,35 @@ func _boss_slam() -> void:
 	queue_redraw()
 
 
+# --- Rival da arena PvP ----------------------------------------------------
+
+## Vira o rival da arena: um herói (Heroes) controlado pela IA. Os números vêm do jogador (ver RivalBrain).
+func setup_rival(hero_id: String, player: Player, difficulty: String, arena_radius: float) -> void:
+	kind = "rival"
+	target = player
+	var rival_hero := Heroes.get_hero(hero_id)
+	color = rival_hero["color"]
+	radius = 18.0
+	xp_value = 0
+	loot = false
+	contact_damage = 0.0
+	display_name = rival_hero["name"]
+	_rival_sprite = Sprite2D.new()
+	_rival_sprite.texture = load(rival_hero["art"])
+	_rival_sprite.scale = Vector2(Player.SPRITE_SCALE, Player.SPRITE_SCALE)
+	_rival_sprite.position = Vector2(0, Player.SPRITE_BASE_Y)
+	add_child(_rival_sprite)
+	brain = RivalBrain.new()
+	add_child(brain)
+	brain.configure(self, player, hero_id, difficulty, arena_radius)
+
+
+## Vira o sprite do rival para o lado em que ele anda.
+func face_sprite(left: bool) -> void:
+	if _rival_sprite != null:
+		_rival_sprite.flip_h = left
+
+
 # --- Habilidades dos monstros novos ----------------------------------------
 
 ## Diabrete: deixa brasas no chão.
@@ -942,6 +980,12 @@ func _draw() -> void:
 			_draw_mimic(fill)
 		"frost", "golem", "imp", "vampire", "illusionist", "storm", "hedgehog", "banshee", "gargoyle", "worm":
 			_draw_new_kind(fill)
+		"rival":
+			# O corpo é o sprite do herói; aqui só o nome em cima da barra de vida.
+			var font := ThemeDB.fallback_font
+			var width := font.get_string_size(display_name, HORIZONTAL_ALIGNMENT_CENTER, -1, 14).x
+			draw_string_outline(font, Vector2(-width * 0.5, -82.0), display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Brand.NIGHT)
+			draw_string(font, Vector2(-width * 0.5, -82.0), display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("ff8a6a"))
 		_:
 			_draw_slime(fill)
 	if shield_time > 0.0:
@@ -1425,7 +1469,8 @@ func die() -> void:
 	_death_burst()
 	remove_from_group("enemies")
 	EventBus.enemy_killed.emit(global_position, xp_value, loot)
-	EventBus.monster_defeated.emit(kind)
+	if kind != "rival":
+		EventBus.monster_defeated.emit(kind)
 	if stolen_gold > 0:
 		EventBus.gold_recovered.emit(global_position, int(stolen_gold * 1.5))
 	if treasure > 0:

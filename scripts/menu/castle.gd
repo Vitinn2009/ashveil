@@ -265,8 +265,11 @@ func _build_bars() -> void:
 	_next_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom_row.add_child(_next_label)
+	var arena_button := Brand.make_wood_button("ARENA PvP", Vector2(190, 56), 20)
+	arena_button.pressed.connect(open_arena_popup)
+	bottom_row.add_child(arena_button)
 	# Na tela só fica o botão: ele abre a janela de escolha da missão.
-	_go_button = Brand.make_wood_button("PARTIR PARA A MISSÃO", Vector2(420, 56), 24)
+	_go_button = Brand.make_wood_button("PARTIR PARA A MISSÃO", Vector2(380, 56), 24)
 	_go_button.pressed.connect(open_mission_popup)
 	_style_go_button(_go_button)
 	bottom_row.add_child(_go_button)
@@ -383,6 +386,13 @@ func _build_mission_popup() -> void:
 	var cancel := Brand.make_wood_button("Cancelar", Vector2(160, 58), 18)
 	cancel.pressed.connect(close_mission_popup)
 	buttons.add_child(cancel)
+
+
+## Abre a escolha do adversário da Arena PvP.
+func open_arena_popup() -> ArenaPopup:
+	var popup := ArenaPopup.new()
+	add_child(popup)
+	return popup
 
 
 func open_mission_popup() -> void:
@@ -885,6 +895,7 @@ func _refresh_stage() -> void:
 func start_mission() -> void:
 	if not Session.is_stage_unlocked(Session.stage_index):
 		return
+	Session.pvp = false
 	Session.save_game()
 	get_tree().change_scene_to_file(GAME_SCENE)
 

@@ -174,6 +174,16 @@ static func get_stage(index: int) -> Dictionary:
 	return stage
 
 
+## A arena do duelo PvP: não é uma fase da lista, só reúne os campos que a partida lê.
+static func arena_stage() -> Dictionary:
+	return {
+		"id": "arena", "name": "Arena PvP", "blurb": "Duelo contra um herói controlado pela IA.",
+		"duration": 150.0, "reward": 0, "kill_goal": 1, "kinds": [], "interval": [99.0, 99.0], "max": [0, 0],
+		"hp_mult": 1.0, "hp_growth": 0.0, "dmg_mult": 1.0, "dmg_growth": 0.0, "events": [],
+		"index": 0, "number": 0, "tint": Color(1.0, 0.92, 0.86),
+	}
+
+
 ## Fase de chefe: o chefe entra no começo e a fase acaba quando ele morre.
 static func is_boss_stage(stage: Dictionary) -> bool:
 	return bool(stage.get("boss_stage", false))

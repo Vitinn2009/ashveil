@@ -86,6 +86,9 @@ func _ready() -> void:
 	var bestiary_button := Brand.make_wood_button("Bestiário", Vector2(136, 50), 20)
 	bestiary_button.pressed.connect(open_bestiary)
 	shortcuts.add_child(bestiary_button)
+	var arena_button := Brand.make_wood_button("Arena PvP", Vector2(136, 50), 20)
+	arena_button.pressed.connect(open_arena)
+	shortcuts.add_child(arena_button)
 
 	_build_top_bar()
 	_build_last_mission_card()
@@ -250,6 +253,13 @@ func _make_title(text: String, font_size: int, color: Color) -> Label:
 	var label := Brand.make_label(text, font_size, color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return label
+
+
+## Abre a Arena PvP: escolha do rival e da dificuldade.
+func open_arena() -> ArenaPopup:
+	var popup := ArenaPopup.new()
+	add_child(popup)
+	return popup
 
 
 ## Abre o catálogo de monstros por cima do menu.

@@ -38,6 +38,12 @@ var skill_tree := {}
 ## Filtro de drops (botão Drop): tipos de item ignorados e raridades que viram fragmento sozinhas.
 var ignored_types: Array = []
 var auto_fragment: Array = [false, false, false, false, false]
+## Arena PvP: se a próxima partida é um duelo, contra qual herói, em qual dificuldade, e o placar.
+var pvp := false
+var pvp_rival := "mage"
+var pvp_difficulty := "normal"
+var pvp_wins := 0
+var pvp_losses := 0
 ## Nível acumulativo de cada herói: {herói: {level, xp, points, earned}}. Nunca zera.
 var hero_progress: Dictionary = {}
 ## Quantos monstros de cada espécie já foram derrotados (catálogo e conquistas).
@@ -97,6 +103,8 @@ func reset_progress() -> void:
 	skill_levels = {}
 	ignored_types = []
 	auto_fragment = [false, false, false, false, false]
+	pvp_wins = 0
+	pvp_losses = 0
 	hero_progress = {}
 	monster_kills = {}
 	shop_seed = randi()
@@ -162,6 +170,8 @@ func save_game() -> bool:
 		"skill_levels": skill_levels,
 		"ignored_types": ignored_types,
 		"auto_fragment": auto_fragment,
+		"pvp_wins": pvp_wins,
+		"pvp_losses": pvp_losses,
 		"hero_progress": hero_progress,
 		"monster_kills": monster_kills,
 		"run": run,
@@ -257,6 +267,8 @@ func load_game() -> bool:
 	if saved_auto is Array:
 		for i in mini(saved_auto.size(), 5):
 			auto_fragment[i] = bool(saved_auto[i])
+	pvp_wins = maxi(int(parsed.get("pvp_wins", 0)), 0)
+	pvp_losses = maxi(int(parsed.get("pvp_losses", 0)), 0)
 	var saved_skill_levels = parsed.get("skill_levels", {})
 	if saved_skill_levels is Dictionary:
 		for hero_key in saved_skill_levels:
