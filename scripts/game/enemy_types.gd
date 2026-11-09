@@ -199,7 +199,7 @@ const DATA := {
 
 
 static func get_type(kind: String) -> Dictionary:
-	return DATA[kind]
+	return Tuning.monster(kind, DATA[kind])
 
 
 ## Tipos que podem aparecer no sorteio (sem as criaturas invocadas).
@@ -227,13 +227,13 @@ static func pick(elapsed: float, allowed: Array = []) -> String:
 	var by_time := allowed.is_empty()
 	var total := 0.0
 	for kind in kinds:
-		if not by_time or DATA[kind]["from"] <= elapsed:
-			total += DATA[kind]["weight"]
+		if not by_time or get_type(kind)["from"] <= elapsed:
+			total += get_type(kind)["weight"]
 	var roll := randf() * total
 	for kind in kinds:
-		if by_time and DATA[kind]["from"] > elapsed:
+		if by_time and get_type(kind)["from"] > elapsed:
 			continue
-		roll -= DATA[kind]["weight"]
+		roll -= get_type(kind)["weight"]
 		if roll <= 0.0:
 			return kind
 	return kinds[0] if not kinds.is_empty() else "slime"

@@ -107,7 +107,7 @@ static func ids() -> Array:
 
 
 static func get_hero(id: String) -> Dictionary:
-	return DATA.get(id, DATA["warrior"])
+	return Tuning.hero(id, DATA.get(id, DATA["warrior"]))
 
 
 ## Todas as habilidades do herói em ordem: as liberadas desde o início e,

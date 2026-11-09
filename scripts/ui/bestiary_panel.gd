@@ -70,7 +70,7 @@ func _init() -> void:
 
 
 func _make_row(kind: String) -> Control:
-	var data: Dictionary = EnemyTypes.DATA[kind]
+	var data: Dictionary = EnemyTypes.get_type(kind)
 	var frame := PanelContainer.new()
 	var style := Brand.make_box(Color("1a100a"), Brand.BRASS_DARK, 2, 6)
 	style.set_content_margin_all(8)

@@ -102,6 +102,7 @@ func _run() -> void:
 	await _test_shade()
 	await _test_new_enemies_and_insane()
 	await _test_pvp_arena()
+	await _test_admin_panel()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -654,7 +655,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.34.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.35.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -732,6 +733,112 @@ func _test_pvp_arena() -> void:
 	popup.queue_free()
 	Session.pvp = false
 	await _frames(2)
+
+func _test_admin_panel() -> void:
+	print("[painel de administração]")
+	Tuning.save_enabled = false
+	Tuning.reset_all()
+	Tuning.unlocked = false
+	_check(Tuning.check_password("admin") and not Tuning.check_password("Admin") and not Tuning.check_password(""), "só a senha admin entra")
+	# Heróis.
+	var base_health: float = Heroes.DATA["mage"]["health"]
+	Tuning.set_hero_field("mage", "health", 333.0)
+	_check(Heroes.get_hero("mage")["health"] == 333.0 and Heroes.DATA["mage"]["health"] == base_health, "mudar a vida base do mago vale no jogo sem mexer no padrão")
+	Tuning.set_hero_field("mage", "damage", 99.0)
+	_check(Heroes.get_hero("mage")["damage"] == 99.0 and Heroes.get_hero("archer")["health"] == Heroes.DATA["archer"]["health"], "e o dano base também, só nesse herói")
+	Tuning.set_hero_field("mage", "health", base_health)
+	_check(not Tuning.data["heroes"]["mage"].has("health"), "voltar ao valor padrão tira o ajuste")
+	# Monstros.
+	Tuning.set_monster_field("slime", "health", 100.0)
+	_check(EnemyTypes.get_type("slime")["health"] == 100.0, "mudar a vida da gosma")
+	var slime := Enemy.new()
+	slime.setup("slime", 0.0)
+	_check(slime.max_health == 100.0, "a gosma nasce com a vida nova (%d)" % slime.max_health)
+	slime.free()
+	Tuning.reset_all()
+	Tuning.set_global("monster_hp", 2.0)
+	Tuning.set_global("monster_dmg", 3.0)
+	var bat := Enemy.new()
+	bat.setup("bat", 0.0)
+	_check(is_equal_approx(bat.max_health, EnemyTypes.DATA["bat"]["health"] * 2.0) and is_equal_approx(bat.contact_damage, EnemyTypes.DATA["bat"]["damage"] * 3.0), "os multiplicadores gerais de vida e dano dos monstros")
+	bat.free()
+	Tuning.reset_all()
+	# Raridade e drops.
+	for i in 4:
+		Tuning.set_rarity_weight(i, 0.0)
+	Tuning.set_rarity_weight(4, 100.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var all_insane := true
+	for i in 100:
+		if Item.create(rng, "weapon", 0, 10).rarity != 4:
+			all_insane = false
+	_check(all_insane, "com todo o peso no Insano, tudo que cai é Insano")
+	Tuning.reset_all()
+	var common := 0
+	for i in 400:
+		if Item.create(rng, "weapon", 0, 10).rarity == 0:
+			common += 1
+	_check(common > 150, "restaurado, o comum volta a ser o mais frequente (%d de 400)" % common)
+	Tuning.set_drop("item", 0.5)
+	_check(Tuning.drop("item", 0.04) == 0.5 and Tuning.drop("gold", 0.1) == 0.1, "a chance de drop de equipamento é editável")
+	Tuning.reset_all()
+	# O painel.
+	var panel := AdminPanel.new()
+	add_child(panel)
+	await _frames(2)
+	_check(panel._password != null and not panel.submit_password(), "senha vazia ou errada não abre")
+	panel._password.text = "errada"
+	_check(not panel.submit_password() and panel._error.text != "", "senha errada mostra o erro")
+	panel._password.text = "admin"
+	_check(panel.submit_password() and Tuning.unlocked and panel._content != null, "a senha certa abre o painel")
+	await _frames(2)
+	for tab_id in ["heroes", "monsters", "drops", "general"]:
+		panel.show_tab(tab_id)
+		await _frames(2)
+		_check(_count_spin_boxes(panel._content) >= 4, "a aba %s tem campos editáveis (%d)" % [tab_id, _count_spin_boxes(panel._content)])
+	panel.show_tab("heroes")
+	await _frames(2)
+	var spin := _first_spin_box(panel._content)
+	spin.value = spin.value + 10.0
+	_check(Tuning.data["heroes"].has("mage"), "editar um campo grava o ajuste")
+	panel.reset_current_tab()
+	_check(Tuning.data["heroes"].is_empty(), "restaurar a aba volta ao padrão")
+	panel.queue_free()
+	# A engrenagem do menu.
+	var menu: Node = load("res://scenes/Main.tscn").instantiate()
+	add_child(menu)
+	await _frames(3)
+	_check(menu._gear_button != null, "o menu tem a engrenagem")
+	menu._gear_button.pressed.emit()
+	await _frames(2)
+	var found := false
+	for child in menu.get_children():
+		if child is AdminPanel:
+			found = true
+	_check(found, "tocar na engrenagem abre o painel")
+	menu.queue_free()
+	Tuning.unlocked = false
+	Tuning.reset_all()
+	Tuning.save_enabled = true
+	await _frames(2)
+
+
+func _count_spin_boxes(node: Node) -> int:
+	var count := 1 if node is SpinBox else 0
+	for child in node.get_children():
+		count += _count_spin_boxes(child)
+	return count
+
+
+func _first_spin_box(node: Node) -> SpinBox:
+	if node is SpinBox:
+		return node
+	for child in node.get_children():
+		var found := _first_spin_box(child)
+		if found != null:
+			return found
+	return null
 
 func _test_totem() -> void:
 	print("[totem curandeiro]")

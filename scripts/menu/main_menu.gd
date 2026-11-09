@@ -3,6 +3,27 @@ extends Control
 const SELECT_SCENE := "res://scenes/CharacterSelect.tscn"
 const CASTLE_SCENE := "res://scenes/Castle.tscn"
 
+## Botão com o desenho de uma engrenagem (a fonte do jogo não tem esse símbolo).
+class GearButton extends Button:
+	func _init() -> void:
+		var normal := Brand.make_wood_button("", Vector2(48, 48)).get_theme_stylebox("normal")
+		add_theme_stylebox_override("normal", normal)
+		add_theme_stylebox_override("hover", Brand.make_wood_button("", Vector2(48, 48)).get_theme_stylebox("hover"))
+		add_theme_stylebox_override("pressed", Brand.make_wood_button("", Vector2(48, 48)).get_theme_stylebox("pressed"))
+		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		custom_minimum_size = Vector2(48, 48)
+
+	func _draw() -> void:
+		var center := size * 0.5
+		var color := Brand.BRASS
+		for i in 8:
+			var direction := Vector2.from_angle(TAU * i / 8.0)
+			draw_line(center + direction * 9.0, center + direction * 15.0, color, 5.0)
+		draw_circle(center, 11.0, color)
+		draw_circle(center, 4.5, Brand.LEATHER)
+
+
+var _gear_button: Button
 var _play_button: Button
 var _options_button: Button
 var _gold_label: Label
@@ -183,6 +204,18 @@ func _build_top_bar() -> void:
 	add_child(options)
 	_options_button = options
 
+	# Engrenagem do administrador: pede a senha e abre o painel de controle do jogo.
+	var gear := GearButton.new()
+	gear.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	gear.offset_left = -198.0
+	gear.offset_right = -150.0
+	gear.offset_top = 18.0
+	gear.offset_bottom = 66.0
+	gear.tooltip_text = "Administração"
+	gear.pressed.connect(open_admin)
+	add_child(gear)
+	_gear_button = gear
+
 
 ## Cartão no canto: a próxima fase e as estrelas da última vencida. Toque para ir ao castelo.
 func _build_last_mission_card() -> void:
@@ -253,6 +286,13 @@ func _make_title(text: String, font_size: int, color: Color) -> Label:
 	var label := Brand.make_label(text, font_size, color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return label
+
+
+## Abre o painel de administração (pede a senha antes).
+func open_admin() -> AdminPanel:
+	var panel := AdminPanel.new()
+	add_child(panel)
+	return panel
 
 
 ## Abre a Arena PvP: escolha do rival e da dificuldade.

@@ -17,6 +17,7 @@ Session="*res://scripts/autoload/session.gd"
 Settings="*res://scripts/autoload/settings.gd"
 Sound="*res://scripts/autoload/sound.gd"
 Updater="*res://scripts/autoload/updater.gd"
+Tuning="*res://scripts/autoload/tuning.gd"
 
 [display]
 

@@ -132,7 +132,7 @@ static func _roll_rarity(rng: RandomNumberGenerator, luck_points: int) -> int:
 	var weights: Array = []
 	var total := 0.0
 	for i in RARITIES.size():
-		var weight: float = RARITIES[i]["weight"] * (1.0 + 0.1 * luck_points * i)
+		var weight: float = Tuning.rarity_weight(i, RARITIES[i]["weight"]) * (1.0 + 0.1 * luck_points * i)
 		weights.append(weight)
 		total += weight
 	var pick := rng.randf() * total

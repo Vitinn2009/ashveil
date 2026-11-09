@@ -688,25 +688,25 @@ func _on_enemy_killed(at_position: Vector2, xp_value: int, loot: bool) -> void:
 	Sound.play("pop")
 	_register_kill()
 	if xp_value > 0:
-		_spawn_pickup("xp", xp_value, at_position)
+		_spawn_pickup("xp", maxi(1, int(round(xp_value * Tuning.glob("xp")))), at_position)
 	if not loot:
 		return
 	var luck := player.get_luck()
 	var drop_mult := player.get_drop_mult()
 	var rolls := 1 + (1 if randf() < 0.05 * luck else 0)
 	for i in rolls:
-		if randf() < GOLD_CHANCE * drop_mult:
-			var amount := int(round(randi_range(1, 2) * (1.0 + 0.05 * minf(luck, 20.0))))
+		if randf() < Tuning.drop("gold", GOLD_CHANCE) * drop_mult:
+			var amount := maxi(1, int(round(randi_range(1, 2) * (1.0 + 0.05 * minf(luck, 20.0)) * Tuning.glob("gold"))))
 			_spawn_pickup("gold", amount, at_position)
-		if randf() < STONE_CHANCE * drop_mult:
+		if randf() < Tuning.drop("stone", STONE_CHANCE) * drop_mult:
 			_spawn_pickup("stone", 1, at_position)
-		if randf() < MOONSTONE_CHANCE * drop_mult:
+		if randf() < Tuning.drop("moonstone", MOONSTONE_CHANCE) * drop_mult:
 			_spawn_pickup("moonstone", 1, at_position)
-		if randf() < RUNE_CHANCE * drop_mult:
+		if randf() < Tuning.drop("rune", RUNE_CHANCE) * drop_mult:
 			_spawn_pickup("rune", Runes.roll(_rune_rng), at_position)
-		if randf() < SCROLL_CHANCE * drop_mult:
+		if randf() < Tuning.drop("scroll", SCROLL_CHANCE) * drop_mult:
 			_spawn_pickup("scroll", 1, at_position)
-		if randf() < ITEM_CHANCE * drop_mult:
+		if randf() < Tuning.drop("item", ITEM_CHANCE) * drop_mult:
 			_spawn_pickup("item", Item.roll(luck, level), at_position)
 
 
