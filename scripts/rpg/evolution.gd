@@ -33,6 +33,11 @@ const PATHS := {
 		{"name": "Inventor", "bonus": {"luck": 5, "attack": 3, "stamina": 4, "skill_power": 1}},
 		{"name": "Mestre Artífice", "bonus": {"luck": 8, "attack": 5, "speed": 3, "skill_power": 2, "skill_range": 2}},
 	],
+	"viking": [
+		{"name": "Guerreiro do Norte", "bonus": {"attack": 3, "hp": 4}},
+		{"name": "Berserker", "bonus": {"attack": 6, "hp": 8, "crit": 3}},
+		{"name": "Filho de Odin", "bonus": {"attack": 10, "hp": 14, "crit": 5, "defense": 5, "skill_power": 2}},
+	],
 }
 const EXTRA_NAMES := {"skill_power": "Poder das habilidades", "skill_range": "Alcance das habilidades"}
 

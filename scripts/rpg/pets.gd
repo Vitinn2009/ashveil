@@ -31,6 +31,16 @@ const BOSS_PETS := {
 	},
 }
 
+## Pets pagos (comprados com diamantes na loja premium, ver Premium).
+const PREMIUM_PETS := {
+	"dire_wolf": {
+		"name": "Lobo Sombrio",
+		"premium": true,
+		"stats": {"attack": 4, "crit": 3, "hp": 4, "speed": 1},
+		"color": Color("6a7388"),
+	},
+}
+
 ## Atributos (pontos) do pet de cada monstro.
 const MONSTER_STATS := {
 	"bat": {"speed": 2, "aspd": 2, "dex": 1},
@@ -71,6 +81,7 @@ static var DATA := _build()
 
 static func _build() -> Dictionary:
 	var data := BOSS_PETS.duplicate(true)
+	data.merge(PREMIUM_PETS.duplicate(true))
 	for kind in MONSTER_STATS:
 		var monster: Dictionary = EnemyTypes.DATA[kind]
 		data[monster_pet_id(kind)] = {
@@ -131,6 +142,8 @@ static func for_kind(kind: String) -> String:
 ## Como o pet é conquistado ("Derrote 1000 Morcegos" ou "Derrote o chefe Rei Gosma").
 static func unlock_text(id: String) -> String:
 	var data := get_pet(id)
+	if data.get("premium", false):
+		return "Compre na loja de diamantes"
 	if data.has("kind"):
 		return "Derrote %d %s" % [KILLS_TO_UNLOCK, data["monster"]]
 	return "Derrote o chefe %s" % data.get("boss", "?")

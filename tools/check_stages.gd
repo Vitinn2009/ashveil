@@ -105,6 +105,7 @@ func _run() -> void:
 	await _test_admin_panel()
 	await _test_new_skills_and_dodge()
 	await _test_admin_attributes_and_arena()
+	await _test_premium_shop()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -657,7 +658,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.37.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.38.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -728,7 +729,7 @@ func _test_pvp_arena() -> void:
 	var popup := ArenaPopup.new()
 	add_child(popup)
 	await _frames(2)
-	_check(popup.rival != "mage" and popup._rival_buttons.size() == 4 and popup._difficulty_buttons.size() == 3, "a janela da arena sugere um rival diferente e tem 4 heróis e 3 dificuldades")
+	_check(popup.rival != "mage" and popup._rival_buttons.size() == Heroes.ids().size() and popup._difficulty_buttons.size() == 3, "a janela da arena sugere um rival diferente, com todos os heróis e 3 dificuldades")
 	popup.choose_rival("gnome")
 	popup.choose_difficulty("hard")
 	_check(popup.rival == "gnome" and popup.difficulty == "hard", "escolher rival e dificuldade")
@@ -899,7 +900,7 @@ func _test_new_skills_and_dodge() -> void:
 				if is_instance_valid(slime) and slime.health < 1.0e6:
 					hurt = true
 			match id:
-				"meditation", "second_wind", "repair", "arrow_rain", "arcane_orb", "whirlwind", "turret", "oil", "trap", "mine", "warcry":
+				"meditation", "second_wind", "repair", "ironhide", "arrow_rain", "arcane_orb", "whirlwind", "turret", "oil", "trap", "mine", "warcry":
 					_check(true, "%s: usada sem erro" % id)
 				"blink", "charge", "leap":
 					_check(_game.player.global_position.distance_to(start) > 60.0 or id == "leap", "%s: move o herói" % id)
@@ -912,7 +913,7 @@ func _test_new_skills_and_dodge() -> void:
 		_game.queue_free()
 		_game = null
 		await _frames(2)
-	_check(total == 24, "as 24 habilidades novas foram usadas (%d)" % total)
+	_check(total == 30, "as 30 habilidades novas (6 por herói) foram usadas (%d)" % total)
 	# Efeitos de cura, mina e torreta.
 	Session.reset_progress()
 	Session.hero_id = "gnome"
@@ -1068,6 +1069,156 @@ func _test_admin_attributes_and_arena() -> void:
 	_check(floor_found and not grass_found and arena_game.decor == null, "a arena é um coliseu: piso de arena, sem grama nem árvores")
 	arena_game.queue_free()
 	Session.pvp = false
+	await _frames(2)
+
+func _test_premium_shop() -> void:
+	print("[loja premium, Viking, pet e conta do admin]")
+	Tuning.save_enabled = false
+	Tuning.reset_all()
+	Tuning.unlocked = false
+	Session.reset_progress()
+	Session.hero_id = "warrior"
+	# Viking: herói pago.
+	var viking := Heroes.get_hero("viking")
+	_check(viking["premium"] and not Session.hero_owned("viking") and Session.hero_owned("mage"), "o Viking é pago e os outros heróis são grátis")
+	_check(Heroes.skill_pool(viking).size() == 9 and Heroes.default_entries(viking).size() == 3, "o Viking tem 3 habilidades iniciais e 6 novas")
+	_check(FileAccess.file_exists("res://assets/characters/viking.svg") and load(viking["art"]) != null, "o Viking tem arte")
+	_check(Premium.price("hero_viking") == 800, "preço padrão do Viking: 800 diamantes")
+	_check(Premium.buy("hero_viking").begins_with("Faltam"), "sem diamantes, a compra é recusada")
+	Session.add_diamonds(1000)
+	_check(Premium.buy("hero_viking") == "" and Session.hero_owned("viking") and Session.diamonds == 200, "comprar o Viking gasta 800 diamantes e libera o herói")
+	_check(Premium.buy("hero_viking") != "" and Session.diamonds == 200, "não cobra duas vezes")
+	# Pet.
+	var wolf := Pets.get_pet("dire_wolf")
+	_check(wolf.get("premium", false) and Pets.unlock_text("dire_wolf").contains("diamantes"), "o Lobo Sombrio é um pet pago")
+	Session.add_diamonds(300)
+	_check(Premium.buy("pet_dire_wolf") == "" and Session.pets.has("dire_wolf") and Session.diamonds == 0, "comprar o pet o entrega e cobra 500")
+	var follower := PetFollower.new()
+	follower.pet_id = "dire_wolf"
+	var holder := Node2D.new()
+	add_child(holder)
+	holder.add_child(follower)
+	follower.setup("dire_wolf", holder)
+	await _frames(3)
+	_check(is_instance_valid(follower), "o Lobo Sombrio é desenhado sem erro")
+	holder.queue_free()
+	# Equipamentos e itens.
+	Session.add_diamonds(5000)
+	var inventory := Session.inventory
+	var before := inventory.bag.size()
+	_check(Premium.buy("gear_legend_weapon") == "" and inventory.bag.size() == before + 1, "comprar uma arma lendária põe o item na mochila")
+	var bought: Item = inventory.bag[inventory.bag.size() - 1]
+	_check(bought.rarity == 3 and bought.slot == "weapon", "e ela é lendária e do tipo certo")
+	_check(Premium.buy("gear_insane_armor") == "" and inventory.bag[inventory.bag.size() - 1].rarity == 4, "a armadura Insana vem Insana")
+	var potions := inventory.potions
+	var gold := inventory.gold
+	Premium.buy("item_potions")
+	Premium.buy("item_gold")
+	_check(inventory.potions == potions + 10 and inventory.gold == gold + 5000, "os pacotes de poções e de ouro chegam")
+	var scrolls := inventory.scrolls
+	Premium.buy("item_scrolls")
+	_check(inventory.scrolls == scrolls + 3, "os pergaminhos chegam")
+	var full_bag := inventory.bag_capacity
+	while inventory.bag.size() < full_bag:
+		inventory.bag.append(Item.roll(0, 5))
+	_check(Premium.buy("gear_epic_armor").begins_with("Mochila cheia"), "com a mochila cheia, equipamento premium não é vendido")
+	# Preços editáveis.
+	Tuning.set_price("hero_viking", 50.0, 800.0)
+	_check(Premium.price("hero_viking") == 50, "o admin muda o preço do Viking")
+	Tuning.set_price("gear_epic_weapon", 7.0, 120.0)
+	_check(Premium.price("gear_epic_weapon") == 7 and Premium.price("gear_epic_armor") == 120, "e o de cada equipamento")
+	Tuning.reset_all()
+	_check(Premium.price("hero_viking") == 800, "restaurar devolve o preço padrão")
+	# Pacotes de diamantes: sem plugin de pagamento, só o modo de teste do admin entrega.
+	var diamonds := Session.diamonds
+	_check(Premium.buy_pack("pack_s") != "" and Session.diamonds == diamonds, "sem o pagamento configurado, comprar pacote não entrega diamantes")
+	Tuning.unlocked = true
+	_check(Premium.buy_pack("pack_s") == "" and Session.diamonds == diamonds + 80, "no modo de teste do admin o pacote é entregue")
+	Tuning.set_price("pack_s_dia", 100.0, 80.0)
+	Tuning.set_price("pack_s_brl", 3.5, 4.99)
+	_check(Premium.pack("pack_s")["diamonds"] == 100 and is_equal_approx(Premium.pack("pack_s")["brl"], 3.5), "o admin muda a quantidade e o preço em reais do pacote")
+	Tuning.reset_all()
+	Tuning.unlocked = false
+	# A página da loja.
+	var shop := DiamondShopPanel.new()
+	add_child(shop)
+	await _frames(2)
+	var expected := {"packs": 5, "hero": 1, "pet": 1, "gear": 8, "item": 8}
+	for tab_id in expected:
+		shop.show_tab(tab_id)
+		await _frames(2)
+		_check(shop._list.get_child_count() == expected[tab_id], "a aba %s da loja tem %d linhas (%d)" % [tab_id, expected[tab_id], shop._list.get_child_count()])
+	shop.show_tab("item")
+	var diamonds_before := Session.diamonds
+	shop._on_buy_pressed("item_potions")
+	_check(Session.diamonds == diamonds_before - 30 and shop._message.text.begins_with("Comprado"), "comprar pela loja cobra e avisa")
+	shop.queue_free()
+	# Seleção de herói com o Viking bloqueado.
+	Session.reset_progress()
+	var select: Node = load("res://scenes/CharacterSelect.tscn").instantiate()
+	add_child(select)
+	await _frames(3)
+	_check(select._cards.size() == Heroes.ids().size() and select._lock_labels.has("viking"), "a seleção mostra o Viking com a trava")
+	select.select_hero("viking")
+	_check(select._start_button.text.contains("800"), "o botão vira 'Comprar · 800 diamantes'")
+	select.start_game()
+	_check(select._notice.text.begins_with("Faltam") and not Session.hero_owned("viking"), "sem diamantes, não compra")
+	Session.add_diamonds(800)
+	select.start_game()
+	_check(Session.hero_owned("viking") and not select._lock_labels.has("viking"), "com diamantes, compra e destrava")
+	select.queue_free()
+	await _frames(2)
+	# Habilidades do Viking numa partida.
+	Session.hero_id = "viking"
+	Session.set_progress("viking", 40, 0.0, 0, 40)
+	Session.stage_index = 6
+	_game = load("res://scenes/Game.tscn").instantiate()
+	add_child(_game)
+	await _frames(3)
+	_check(_game.player.hero_id == "viking" and _game.skill_buttons.size() == 3, "o Viking joga com 3 casas de habilidade")
+	_game.queue_free()
+	_game = null
+	await _frames(2)
+	Session.stage_index = 0
+	# Conta do admin.
+	Session.reset_progress()
+	Tuning.unlocked = true
+	var panel := AdminPanel.new()
+	add_child(panel)
+	await _frames(2)
+	for tab_id in ["prices", "account"]:
+		panel.show_tab(tab_id)
+		await _frames(2)
+		_check(_count_spin_boxes(panel._content) >= 4, "a aba %s do admin tem campos (%d)" % [tab_id, _count_spin_boxes(panel._content)])
+	panel.show_tab("prices")
+	await _frames(2)
+	_check(_count_spin_boxes(panel._content) >= 8 + Premium.ENTRIES.size(), "a aba Preços lista pacotes, heróis, pet, equipamentos e itens (%d)" % _count_spin_boxes(panel._content))
+	var price_spin := _first_spin_box(panel._content)
+	price_spin.value = price_spin.value + 1.0
+	_check(not Tuning.data["prices"].is_empty(), "editar um preço grava o ajuste")
+	panel.reset_current_tab()
+	_check(Tuning.data["prices"].is_empty(), "restaurar a aba de preços limpa tudo")
+	panel.account_set_level("mage", 50, 30)
+	var progress := Session.progress_for("mage")
+	_check(int(progress["level"]) == 50 and int(progress["points"]) == 30, "o admin sobe o nível e os pontos do próprio herói")
+	panel.account_set_gold(123456)
+	panel.account_set_diamonds(777)
+	_check(Session.inventory.gold == 123456 and Session.diamonds == 777, "o admin define ouro e diamantes")
+	var count := Session.inventory.bag.size()
+	panel.account_give_item("weapon", 4)
+	_check(Session.inventory.bag.size() == count + 1 and Session.inventory.bag[count].rarity == 4, "o admin dá um equipamento Insano a si mesmo")
+	panel.account_give_all_slots(3)
+	_check(Session.inventory.bag.size() == count + 1 + Item.SLOTS.size(), "ou um de cada tipo")
+	panel.account_max_everything()
+	var all_heroes := true
+	for id in Heroes.ids():
+		if not Session.hero_owned(id) or int(Session.progress_for(id)["level"]) != 100:
+			all_heroes = false
+	_check(all_heroes and Session.pets.size() == Pets.ids().size() and Session.diamonds == 9999999 and Session.highest_unlocked() >= 60, "máximo em tudo: heróis nível 100, pets, diamantes e fases")
+	panel.queue_free()
+	Tuning.unlocked = false
+	Tuning.reset_all()
+	Session.reset_progress()
 	await _frames(2)
 
 func _test_totem() -> void:

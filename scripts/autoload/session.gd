@@ -46,6 +46,9 @@ var pvp_rival := "mage"
 var pvp_difficulty := "normal"
 var pvp_wins := 0
 var pvp_losses := 0
+## Diamantes (moeda premium) e os heróis pagos que o jogador já comprou.
+var diamonds := 0
+var owned_heroes: Array = []
 ## Nível acumulativo de cada herói: {herói: {level, xp, points, earned}}. Nunca zera.
 var hero_progress: Dictionary = {}
 ## Quantos monstros de cada espécie já foram derrotados (catálogo e conquistas).
@@ -108,6 +111,8 @@ func reset_progress() -> void:
 	auto_fragment = [false, false, false, false, false]
 	pvp_wins = 0
 	pvp_losses = 0
+	diamonds = 0
+	owned_heroes = []
 	hero_progress = {}
 	monster_kills = {}
 	shop_seed = randi()
@@ -176,6 +181,8 @@ func save_game() -> bool:
 		"auto_fragment": auto_fragment,
 		"pvp_wins": pvp_wins,
 		"pvp_losses": pvp_losses,
+		"diamonds": diamonds,
+		"owned_heroes": owned_heroes,
 		"hero_progress": hero_progress,
 		"monster_kills": monster_kills,
 		"run": run,
@@ -279,6 +286,15 @@ func load_game() -> bool:
 				skill_loadout[str(hero_key)] = saved_loadout[hero_key].map(func(entry) -> String: return str(entry))
 	pvp_wins = maxi(int(parsed.get("pvp_wins", 0)), 0)
 	pvp_losses = maxi(int(parsed.get("pvp_losses", 0)), 0)
+	diamonds = maxi(int(parsed.get("diamonds", 0)), 0)
+	owned_heroes = []
+	var saved_owned = parsed.get("owned_heroes", [])
+	if saved_owned is Array:
+		for hero_key in saved_owned:
+			if Heroes.DATA.has(str(hero_key)) and not owned_heroes.has(str(hero_key)):
+				owned_heroes.append(str(hero_key))
+	if not hero_owned(hero_id):
+		hero_id = "mage"
 	var saved_skill_levels = parsed.get("skill_levels", {})
 	if saved_skill_levels is Dictionary:
 		for hero_key in saved_skill_levels:
@@ -605,5 +621,34 @@ func equip_skill(hero: String, slot: int, id: String) -> bool:
 		current[other] = current[slot]
 	current[slot] = id
 	skill_loadout[hero] = current
+	_mark_dirty()
+	return true
+
+
+# --- Diamantes e heróis pagos ---------------------------------------------------------------------
+
+func add_diamonds(amount: int) -> void:
+	diamonds = maxi(diamonds + amount, 0)
+	_mark_dirty()
+
+
+## Gasta diamantes. Devolve false (e não gasta nada) se faltar saldo.
+func spend_diamonds(amount: int) -> bool:
+	if amount < 0 or diamonds < amount:
+		return false
+	diamonds -= amount
+	_mark_dirty()
+	return true
+
+
+## O herói está liberado? Os heróis gratuitos sempre; os pagos só depois de comprados.
+func hero_owned(id: String) -> bool:
+	return not bool(Heroes.get_hero(id).get("premium", false)) or owned_heroes.has(id)
+
+
+func unlock_hero(id: String) -> bool:
+	if not Heroes.DATA.has(id) or owned_heroes.has(id):
+		return false
+	owned_heroes.append(id)
 	_mark_dirty()
 	return true

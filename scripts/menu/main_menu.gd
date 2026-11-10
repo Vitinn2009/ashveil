@@ -64,10 +64,10 @@ func _ready() -> void:
 	heroes.offset_top = -330.0
 	heroes.offset_bottom = -30.0
 	heroes.alignment = BoxContainer.ALIGNMENT_CENTER
-	heroes.add_theme_constant_override("separation", 48)
+	heroes.add_theme_constant_override("separation", 28)
 	add_child(heroes)
-	for id in ["mage", "gnome", "warrior", "archer"]:
-		heroes.add_child(_make_hero_art(id, 1.0 if id == "warrior" else (0.72 if id == "gnome" else 0.82)))
+	for id in ["mage", "gnome", "warrior", "viking", "archer"]:
+		heroes.add_child(_make_hero_art(id, 1.0 if (id == "warrior" or id == "viking") else (0.72 if id == "gnome" else 0.82)))
 
 	var column := VBoxContainer.new()
 	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)

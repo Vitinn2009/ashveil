@@ -62,6 +62,11 @@ class Blast extends Node2D:
 		ring.duration = 0.4
 		get_parent().add_child(ring)
 		ring.global_position = global_position
+		if falling == "bolt":
+			var bolt := LightningBolt.new()
+			bolt.radius = radius
+			get_parent().add_child(bolt)
+			bolt.global_position = global_position
 		for enemy in SkillEffects.enemies_in(get_tree(), global_position, radius):
 			enemy.take_damage(damage, "skill")
 			if enemy.is_queued_for_deletion():

@@ -106,7 +106,7 @@ func skill_reach() -> float:
 
 
 func skill_cooldown(id: String) -> float:
-	return float(Skills.DEFS[id]["cooldown"]) * cooldown_mult * (1.0 - Skills.COOLDOWN_PER_LEVEL * skill_level)
+	return float(Skills.def(id)["cooldown"]) * cooldown_mult * (1.0 - Skills.COOLDOWN_PER_LEVEL * skill_level)
 
 
 func basic_damage() -> float:
@@ -287,6 +287,12 @@ func _wants(id: String, distance: float, hp_ratio: float) -> bool:
 			return distance < 420.0
 		"bomb_rain":
 			return distance < 520.0
+		"axe_throw":
+			return distance < 380.0
+		"rage":
+			return haste_time <= 0.0 and (distance < 320.0 or hp_ratio < 0.5)
+		"thunder_slam":
+			return distance < 440.0
 	return false
 
 
@@ -298,7 +304,7 @@ func _cast(id: String, direction: Vector2, _distance: float) -> void:
 	last_skill = id
 	var strength := skill_power(id)
 	var area := skill_reach()
-	var color: Color = Skills.DEFS[id]["color"]
+	var color: Color = Skills.def(id)["color"]
 	var origin := enemy.global_position
 	var hd := float(hero["damage"])
 	match id:
@@ -363,6 +369,19 @@ func _cast(id: String, direction: Vector2, _distance: float) -> void:
 			var flask := _blast(_lead(origin, 400.0), 140.0 * area, 0.55, 0.0, color, "flask")
 			flask.slow_factor = 0.05
 			flask.slow_time = 2.0 * (1.0 + (strength - 1.0) * 0.5)
+		"axe_throw":
+			var aim := (_lead(origin, 560.0) - origin).normalized()
+			_shoot("axe", aim, hd * 2.4 * damage_mult * strength, 560.0, 0.9 * area * 560.0, 16.0, 3, color)
+		"rage":
+			haste_time = 6.0 * strength
+			enemy.health = minf(enemy.max_health, enemy.health + enemy.max_health * 0.1)
+			_ring(origin, 70.0 * area, color)
+		"thunder_slam":
+			for i in 5:
+				var at := player.global_position + (Vector2.ZERO if i == 0 else Vector2.from_angle(randf() * TAU) * randf_range(60.0, 180.0))
+				var strike := _blast(at, 90.0 * area, 0.5 + 0.15 * i, (35.0 + hd * 1.8) * damage_mult * strength, color, "bolt")
+				strike.slow_factor = 0.3
+				strike.slow_time = 1.0
 		"bomb_rain":
 			for i in 5:
 				var spot := player.global_position + (Vector2.ZERO if i == 0 else Vector2.from_angle(randf() * TAU) * randf_range(60.0, 170.0))

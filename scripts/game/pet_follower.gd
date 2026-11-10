@@ -71,6 +71,29 @@ func _draw() -> void:
 			draw_colored_polygon(PackedVector2Array([Vector2(0, -8 + bob), Vector2(4, 0 + bob), Vector2(0, 7 + bob), Vector2(-4, 0 + bob)]), color.lightened(0.5))
 			draw_circle(Vector2(-3, -1 + bob), 1.8, Brand.NIGHT)
 			draw_circle(Vector2(3, -1 + bob), 1.8, Brand.NIGHT)
+		"dire_wolf":
+			# Lobo sombrio: pelo cinza-azulado, orelhas pontudas, olhos vermelhos e cauda cheia.
+			var step := sin(_clock * 8.0) * 1.5
+			var tail := PackedVector2Array([Vector2(-11, -1 + bob), Vector2(-21, -9 + bob + step), Vector2(-24, -3 + bob + step), Vector2(-12, 5 + bob)])
+			draw_colored_polygon(tail, Brand.NIGHT)
+			draw_colored_polygon(PackedVector2Array([Vector2(-12, 0 + bob), Vector2(-20, -7 + bob + step), Vector2(-22, -3 + bob + step), Vector2(-12, 4 + bob)]), color.lightened(0.15))
+			for leg_x in [-8.0, -2.0, 4.0, 9.0]:
+				draw_rect(Rect2(leg_x - 1.5, 6 + bob, 3.5, 7), Brand.NIGHT)
+			var body_wolf := PackedVector2Array([Vector2(-12, 2 + bob), Vector2(-8, -6 + bob), Vector2(6, -6 + bob), Vector2(13, -1 + bob), Vector2(11, 8 + bob), Vector2(-10, 8 + bob)])
+			var outline_wolf := PackedVector2Array()
+			for point in body_wolf:
+				outline_wolf.append(point * 1.12)
+			draw_colored_polygon(outline_wolf, Brand.NIGHT)
+			draw_colored_polygon(body_wolf, color)
+			draw_colored_polygon(PackedVector2Array([Vector2(-6, 3 + bob), Vector2(8, 3 + bob), Vector2(9, 7 + bob), Vector2(-6, 7 + bob)]), color.lightened(0.3))
+			var head_wolf := PackedVector2Array([Vector2(8, -9 + bob), Vector2(18, -7 + bob), Vector2(23, 0 + bob), Vector2(18, 4 + bob), Vector2(9, 3 + bob)])
+			draw_colored_polygon(PackedVector2Array([Vector2(7, -10 + bob), Vector2(10, -18 + bob), Vector2(14, -9 + bob)]), Brand.NIGHT)
+			draw_colored_polygon(PackedVector2Array([Vector2(13, -10 + bob), Vector2(17, -17 + bob), Vector2(19, -8 + bob)]), Brand.NIGHT)
+			draw_colored_polygon(head_wolf, color.darkened(0.1))
+			draw_polyline(head_wolf + PackedVector2Array([head_wolf[0]]), Brand.NIGHT, 1.6)
+			draw_circle(Vector2(16, -3 + bob), 2.0, Color("ff3030"))
+			draw_circle(Vector2(23, 0 + bob), 1.8, Brand.NIGHT)
+			draw_line(Vector2(21, 3 + bob), Vector2(17, 3 + bob), Color("f4e9d8"), 1.4)
 		_:
 			# Pet de monstro: um bichinho na cor do monstro, com olhos, e uma marca que muda de um para outro.
 			var shape := PackedVector2Array()

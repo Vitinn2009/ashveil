@@ -93,6 +93,19 @@ func attr(stat: String, field: String, base: int) -> int:
 	return int(overrides.get(field, base))
 
 
+## Preço (em diamantes, ou os campos dos pacotes) de um item pago, com o ajuste do painel admin por cima.
+func price(id: String, base: float) -> float:
+	return float(data["prices"].get(id, base))
+
+
+func set_price(id: String, value: float, base: float) -> void:
+	if is_equal_approx(value, base):
+		data["prices"].erase(id)
+	else:
+		data["prices"][id] = value
+	_commit()
+
+
 func set_player(key: String, value: float) -> void:
 	var base := float(player_fields()[key][4])
 	if is_equal_approx(value, base):
@@ -119,9 +132,11 @@ func set_attr(stat: String, field: String, value: int) -> void:
 var save_enabled := true
 var save_path := "user://ashveil_admin.json"
 var unlocked := false
+## Modo de teste do admin: compras de pacotes de diamantes entregam de graça (só com o painel liberado).
+var test_purchases := true
 ## Só o que foi alterado: {"heroes": {id: {campo: valor}}, "monsters": {...}, "rarity": {"0": peso},
 ## "drops": {chave: valor}, "global": {chave: valor}}.
-var data := {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}}
+var data := {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}, "prices": {}}
 var _hero_cache := {}
 var _monster_cache := {}
 
@@ -210,7 +225,7 @@ func _set_override(group: String, id: String, field: String, value: float, base:
 
 
 func reset_all() -> void:
-	data = {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}}
+	data = {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}, "prices": {}}
 	_commit()
 
 

@@ -15,6 +15,8 @@ var _selected := "mage"
 var _cards := {}
 var _start_button: Button
 var _detail_box: VBoxContainer
+var _notice: Label
+var _lock_labels := {}
 
 
 func _ready() -> void:
@@ -44,7 +46,7 @@ func _ready() -> void:
 	column.add_child(body)
 
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.custom_minimum_size = Vector2(GRID_WIDTH, 0)
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 14)
@@ -66,6 +68,10 @@ func _ready() -> void:
 	_detail_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail_box.add_theme_constant_override("separation", 8)
 	scroll.add_child(_detail_box)
+
+	_notice = Brand.make_label("", 16, Color("ffe9a8"))
+	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_notice)
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -89,12 +95,29 @@ func select_hero(id: String) -> void:
 		var bg := Color("2a1a4d") if chosen else Color(Brand.NIGHT, 0.9)
 		_cards[card_id].add_theme_stylebox_override("panel", _card_style(bg, border, 5 if chosen else 2))
 		_cards[card_id].modulate = Color.WHITE if chosen else Color(0.82, 0.82, 0.88)
-	_start_button.text = "Ir ao castelo com %s" % Heroes.get_hero(id)["name"]
+	_notice.text = ""
+	if Session.hero_owned(id):
+		_start_button.text = "Ir ao castelo com %s" % Heroes.get_hero(id)["name"]
+	else:
+		_start_button.text = "Comprar %s · %d diamantes" % [Heroes.get_hero(id)["name"], Premium.price("hero_" + id)]
 	_fill_details(id)
 
 
-## Grava o herói escolhido e segue para o castelo, onde fica o mercado.
+## Grava o herói escolhido e segue para o castelo, onde fica o mercado. Herói pago ainda não comprado:
+## o botão compra (com diamantes) em vez de seguir.
 func start_game() -> void:
+	if not Session.hero_owned(_selected):
+		var error := Premium.buy("hero_" + _selected)
+		if error != "":
+			_notice.text = "%s. Compre diamantes na loja do castelo." % error if error.begins_with("Faltam") else error
+			return
+		_notice.text = "%s desbloqueado!" % Heroes.get_hero(_selected)["name"]
+		if _lock_labels.has(_selected):
+			_lock_labels[_selected].queue_free()
+			_lock_labels.erase(_selected)
+		_cards[_selected].modulate = Color.WHITE
+		_start_button.text = "Ir ao castelo com %s" % Heroes.get_hero(_selected)["name"]
+		return
 	Session.hero_id = _selected
 	Session.save_game()
 	get_tree().change_scene_to_file(CASTLE_SCENE)
@@ -115,7 +138,7 @@ func _burst_damage(hero: Dictionary) -> float:
 func _make_card(id: String) -> PanelContainer:
 	var hero := Heroes.get_hero(id)
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2((GRID_WIDTH - 14.0) / 2.0, 190)
+	card.custom_minimum_size = Vector2((GRID_WIDTH - 28.0) / 3.0, 190)
 	# PASS deixa o arrasto do dedo chegar à rolagem, e o toque ainda escolhe o herói.
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
 	card.gui_input.connect(func(event: InputEvent) -> void:
@@ -136,9 +159,15 @@ func _make_card(id: String) -> PanelContainer:
 	var name_label := Brand.make_label(hero["name"], 26, hero["color"])
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(name_label)
-	var level := Brand.make_label("Nível %d" % Session.progress_for(id)["level"], 14, Brand.PARCHMENT.darkened(0.15))
-	level.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(level)
+	if Session.hero_owned(id):
+		var level := Brand.make_label("Nível %d" % Session.progress_for(id)["level"], 14, Brand.PARCHMENT.darkened(0.15))
+		level.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(level)
+	else:
+		var lock := Brand.make_label("Bloqueado · %d diamantes" % Premium.price("hero_" + id), 12, Color("7ad0ff"))
+		lock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(lock)
+		_lock_labels[id] = lock
 
 	_ignore_mouse(card)
 	return card

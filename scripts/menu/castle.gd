@@ -23,6 +23,7 @@ const MENU_ENTRIES := [
 	{"id": "forge", "name": "Ferreiro"},
 	{"id": "runes", "name": "Runas"},
 	{"id": "bestiary", "name": "Catálogo"},
+	{"id": "diamonds", "name": "Diamantes"},
 ]
 
 var category := "potions"
@@ -69,6 +70,8 @@ var _page := "market"
 var _minimized := false
 var _skills_panel: SkillsPanel
 var _bestiary_panel: BestiaryPanel
+var _diamond_panel: DiamondShopPanel
+var _top_diamonds: Button
 var _inventory_window: InventoryWindow
 var _stats_panel: PanelContainer
 var _preview: Player
@@ -245,6 +248,11 @@ func _build_bars() -> void:
 	top_row.add_child(spacer)
 	_top_hero = Brand.make_label("", 18, Brand.PARCHMENT)
 	top_row.add_child(_top_hero)
+	# Saldo de diamantes: tocar abre a loja premium.
+	_top_diamonds = Brand.make_wood_button("", Vector2(190, 38), 17)
+	_top_diamonds.add_theme_color_override("font_color", Color("7ad0ff"))
+	_top_diamonds.pressed.connect(show_menu.bind("diamonds"))
+	top_row.add_child(_top_diamonds)
 	_top_gold = Brand.make_label("", 20, Brand.GOLD)
 	top_row.add_child(_top_gold)
 
@@ -455,6 +463,11 @@ func _build_shop_panel() -> void:
 	_bestiary_panel = BestiaryPanel.new()
 	_bestiary_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pages["bestiary"] = _bestiary_panel
+	_diamond_panel = DiamondShopPanel.new()
+	_diamond_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_diamond_panel.changed.connect(_refresh)
+	_pages["diamonds"] = _diamond_panel
+	_menu_content.add_child(_diamond_panel)
 	_menu_content.add_child(_bestiary_panel)
 	# Abas na lateral direita: cada uma abre só a sua página, e tocar de novo na aba aberta fecha.
 	_shortcuts = VBoxContainer.new()
@@ -543,6 +556,8 @@ func show_menu(id: String) -> void:
 		_forge_panel.auto_pick()
 	elif id == "pets":
 		_pets_panel.refresh()
+	elif id == "diamonds":
+		_diamond_panel.refresh()
 	elif id == "bestiary":
 		_bestiary_panel.refresh()
 	_apply_menu()
@@ -595,6 +610,7 @@ func _refresh() -> void:
 	var inv := inventory()
 	_gold_label.text = "Ouro: %d" % inv.gold
 	_top_gold.text = "Ouro  %d" % inv.gold
+	_top_diamonds.text = "Diamantes  %d" % Session.diamonds
 	var hero_data := Heroes.get_hero(Session.hero_id)
 	var hero_progress := Session.progress_for(Session.hero_id)
 	_top_hero.text = "%s · nível %d · %d pontos" % [hero_data["name"], hero_progress["level"], hero_progress["points"]]

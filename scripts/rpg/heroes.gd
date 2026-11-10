@@ -103,11 +103,35 @@ const DATA := {
 		"bag_bonus": 8,
 		"base_luck": 3,
 	},
+	"viking": {
+		"id": "viking",
+		"name": "Viking",
+		"title": "Furioso do Norte",
+		"description": "Guerreiro nórdico de machado e escudo redondo. Muito resistente e brutal de perto: quanto mais perto do inimigo, mais dano. Herói pago (diamantes).",
+		"art": "res://assets/characters/viking.svg",
+		"color": Color("d9a05b"),
+		"attack": "melee",
+		"premium": true,
+		"health": 170.0,
+		"energy": 100.0,
+		"speed": 160.0,
+		"defense": 7.0,
+		"damage": 22.0,
+		"interval": 0.8,
+		"accuracy": 0.85,
+		"range": 105.0,
+		"projectile_speed": 0.0,
+		"projectile_color": Color("f0e6d2"),
+		"skills": ["axe_throw", "rage"],
+		"unlock": {"id": "thunder_slam", "level": UNLOCK_LEVEL},
+		"bag_bonus": 2,
+		"base_luck": 0,
+	},
 }
 
 
 static func ids() -> Array:
-	return ["mage", "archer", "warrior", "gnome"]
+	return ["mage", "archer", "warrior", "gnome", "viking"]
 
 
 static func get_hero(id: String) -> Dictionary:

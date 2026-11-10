@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 160" width="128" height="160">
+  <!-- Sombra -->
+  <ellipse cx="64" cy="152" rx="34" ry="6" fill="#000" opacity="0.28"/>
+  <!-- Machado: cabo e lâmina -->
+  <rect x="98" y="38" width="7" height="100" rx="2" fill="#8a5a2a" stroke="#1b1036" stroke-width="2.5"/>
+  <line x1="101" y1="44" x2="101" y2="132" stroke="#5a3a1a" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <path d="M105 36 Q126 30 125 54 Q124 76 105 70 Q112 54 105 36 Z" fill="#c4ccd8" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M110 42 Q120 40 119 54 Q118 66 110 64" fill="none" stroke="#f0f4fa" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="101.500" cy="140" r="4" fill="#9aa5b5" stroke="#1b1036" stroke-width="2.5"/>
+  <!-- Botas de couro com pelo -->
+  <rect x="46" y="138" width="17" height="14" rx="4" fill="#6b4423" stroke="#1b1036" stroke-width="3"/>
+  <rect x="65" y="138" width="17" height="14" rx="4" fill="#6b4423" stroke="#1b1036" stroke-width="3"/>
+  <rect x="45" y="136" width="19" height="6" rx="3" fill="#cfc6b4" stroke="#1b1036" stroke-width="2"/>
+  <rect x="64" y="136" width="19" height="6" rx="3" fill="#cfc6b4" stroke="#1b1036" stroke-width="2"/>
+  <!-- Calças -->
+  <path d="M44 140 L47 108 L81 108 L84 140 Z" fill="#7a5230" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="64" y1="110" x2="64" y2="138" stroke="#1b1036" stroke-width="2.500"/>
+  <!-- Túnica -->
+  <path d="M40 118 L43 80 Q64 70 85 80 L88 118 Z" fill="#dcc48e" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M50 84 Q64 90 78 84" fill="none" stroke="#b39a62" stroke-width="2"/>
+  <!-- Cinto largo com tachas douradas -->
+  <rect x="41" y="98" width="46" height="12" rx="2" fill="#6b3f1d" stroke="#1b1036" stroke-width="2.500"/>
+  <circle cx="48" cy="104" r="2.200" fill="#f2b705"/>
+  <circle cx="55" cy="104" r="2.200" fill="#f2b705"/>
+  <circle cx="62" cy="104" r="2.200" fill="#f2b705"/>
+  <circle cx="69" cy="104" r="2.200" fill="#f2b705"/>
+  <circle cx="76" cy="104" r="2.200" fill="#f2b705"/>
+  <circle cx="83" cy="104" r="2.200" fill="#f2b705"/>
+  <!-- Braço do machado, com braçadeira -->
+  <ellipse cx="92" cy="98" rx="8" ry="14" fill="#dcc48e" stroke="#1b1036" stroke-width="3"/>
+  <rect x="85" y="104" width="14" height="9" rx="3" fill="#4a3a2a" stroke="#1b1036" stroke-width="2"/>
+  <circle cx="101" cy="110" r="5.500" fill="#e8b890" stroke="#1b1036" stroke-width="2.500"/>
+  <!-- Manto de pelo nos ombros -->
+  <path d="M32 90 Q36 68 64 64 Q92 68 96 90 Q90 84 83 88 Q78 80 70 86 Q64 78 58 86 Q50 80 45 88 Q38 84 32 90 Z" fill="#9a9aa4" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M40 84 Q46 76 54 78 M74 78 Q82 76 88 84 M52 72 Q64 68 76 72" fill="none" stroke="#cfd0d8" stroke-width="2" stroke-linecap="round"/>
+  <!-- Cabelo longo -->
+  <path d="M45 52 Q43 28 64 26 Q85 28 83 52 Q86 70 80 84 L76 62 Q64 70 52 62 L48 84 Q42 70 45 52 Z" fill="#dcb25a" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Rosto -->
+  <ellipse cx="64" cy="50" rx="16" ry="17" fill="#e8b890" stroke="#1b1036" stroke-width="3"/>
+  <path d="M50 42 Q64 32 78 42 Q72 38 64 38 Q56 38 50 42 Z" fill="#dcb25a" stroke="#1b1036" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M54 46 L61 48" stroke="#1b1036" stroke-width="2.500" stroke-linecap="round"/>
+  <path d="M74 46 L67 48" stroke="#1b1036" stroke-width="2.500" stroke-linecap="round"/>
+  <circle cx="58" cy="51" r="2" fill="#1b1036"/>
+  <circle cx="70" cy="51" r="2" fill="#1b1036"/>
+  <circle cx="53" cy="56" r="3" fill="#d9705a" opacity="0.5"/>
+  <circle cx="75" cy="56" r="3" fill="#d9705a" opacity="0.5"/>
+  <!-- Barba trançada -->
+  <path d="M49 55 Q64 90 79 55 Q76 72 64 80 Q52 72 49 55 Z" fill="#e6c068" stroke="#1b1036" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M58 62 Q64 66 70 62" fill="none" stroke="#1b1036" stroke-width="2.500" stroke-linecap="round"/>
+  <ellipse cx="55" cy="86" rx="3.500" ry="7" fill="#dcb25a" stroke="#1b1036" stroke-width="2"/>
+  <ellipse cx="73" cy="86" rx="3.500" ry="7" fill="#dcb25a" stroke="#1b1036" stroke-width="2"/>
+  <rect x="52" y="91" width="6" height="3" rx="1" fill="#f2b705" stroke="#1b1036" stroke-width="1.500"/>
+  <rect x="70" y="91" width="6" height="3" rx="1" fill="#f2b705" stroke="#1b1036" stroke-width="1.500"/>
+  <!-- Escudo redondo, metade branca e metade vermelha -->
+  <circle cx="30" cy="112" r="25" fill="#f4e9d8" stroke="#1b1036" stroke-width="3"/>
+  <path d="M30 87 A25 25 0 0 1 30 137 Z" fill="#b83a2a"/>
+  <circle cx="30" cy="112" r="25" fill="none" stroke="#1b1036" stroke-width="3"/>
+  <circle cx="30" cy="112" r="21" fill="none" stroke="#8a8f99" stroke-width="3"/>
+  <line x1="12" y1="112" x2="48" y2="112" stroke="#6a6f78" stroke-width="3"/>
+  <circle cx="30" cy="112" r="7" fill="#aab4c4" stroke="#1b1036" stroke-width="2.500"/>
+  <circle cx="28" cy="110" r="2" fill="#f0f4fa"/>
+</svg>

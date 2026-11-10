@@ -60,6 +60,13 @@ func _draw() -> void:
 			draw_line(Vector2(-radius * 2.6, 0), Vector2.ZERO, Color(color, 0.45), radius * 1.2)
 			draw_circle(Vector2.ZERO, radius, Color("c9962c"))
 			draw_circle(Vector2.ZERO, radius * 0.6, color)
+		"axe":
+			# Machado: cabo curto e lâmina larga de aço, apontando para a frente.
+			draw_line(Vector2(-14, 0), Vector2(6, 0), Brand.NIGHT, 6.0)
+			draw_line(Vector2(-14, 0), Vector2(6, 0), Color("a8743a"), 3.0)
+			var blade := PackedVector2Array([Vector2(4, -3), Vector2(8, -13), Vector2(17, -10), Vector2(15, 0), Vector2(17, 10), Vector2(8, 13), Vector2(4, 3)])
+			draw_colored_polygon(blade, Brand.NIGHT)
+			draw_colored_polygon(PackedVector2Array([Vector2(5, -3), Vector2(9, -11), Vector2(15, -9), Vector2(13, 0), Vector2(15, 9), Vector2(9, 11), Vector2(5, 3)]), color)
 		"fire_arrow":
 			draw_circle(Vector2(-16, 0), 9.0, Color(color, 0.3))
 			draw_line(Vector2(-16, 0), Vector2(6, 0), Brand.NIGHT, 5.0)

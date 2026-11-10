@@ -130,17 +130,63 @@ const DEFS := {
 		"desc": "Uma bala de canhão que atravessa 3 monstros e queima.",
 		"cooldown": 14.0, "cost": 40.0, "color": Color("ff5a1a"), "glyph": "Tc",
 	},
+	# --- Viking (as três primeiras já vêm com o herói; as outras seis se equipam) -----------------
+	"axe_throw": {
+		"name": "Machado Arremessado", "hero": "viking", "req": 0, "base": true,
+		"desc": "Arremessa um machado que atravessa até 3 monstros.",
+		"cooldown": 7.0, "cost": 22.0, "color": Color("c4ccd8"), "glyph": "Ma",
+	},
+	"rage": {
+		"name": "Fúria Berserker", "hero": "viking", "req": 0, "base": true,
+		"desc": "+50% de movimento e +40% de ataque por 6s, e recupera um pouco de vida.",
+		"cooldown": 14.0, "cost": 25.0, "color": Color("e0452d"), "glyph": "Fu",
+	},
+	"thunder_slam": {
+		"name": "Trovão de Thor", "hero": "viking", "req": 20, "base": true,
+		"desc": "Cinco raios caem em volta do herói e atordoam quem for atingido.",
+		"cooldown": 15.0, "cost": 45.0, "color": Color("ffe45c"), "glyph": "Tt",
+	},
+	"shield_bash": {
+		"name": "Golpe de Escudo", "hero": "viking", "req": 5,
+		"desc": "Bate com o escudo à frente: dano, empurrão e atordoa por 1,5s.",
+		"cooldown": 9.0, "cost": 22.0, "color": Color("e8d4a8"), "glyph": "Ge",
+	},
+	"battle_horn": {
+		"name": "Corneta de Guerra", "hero": "viking", "req": 10,
+		"desc": "Um toque de corneta que deixa os monstros próximos 60% mais lentos por 5s.",
+		"cooldown": 16.0, "cost": 30.0, "color": Color("f2b705"), "glyph": "Co",
+	},
+	"spear_toss": {
+		"name": "Lanças do Norte", "hero": "viking", "req": 15,
+		"desc": "Arremessa 3 lanças em leque que atravessam 2 monstros cada.",
+		"cooldown": 11.0, "cost": 30.0, "color": Color("d9c9a0"), "glyph": "La",
+	},
+	"ironhide": {
+		"name": "Pele de Ferro", "hero": "viking", "req": 20,
+		"desc": "Um escudo grande que absorve dano por 8s.",
+		"cooldown": 20.0, "cost": 30.0, "color": Color("9aa5b5"), "glyph": "Pf",
+	},
+	"axe_whirl": {
+		"name": "Machadadas Giratórias", "hero": "viking", "req": 25,
+		"desc": "Três machados giram em volta do herói por 4s ferindo quem chegar perto.",
+		"cooldown": 17.0, "cost": 40.0, "color": Color("c4ccd8"), "glyph": "Mg",
+	},
+	"valhalla": {
+		"name": "Valhalla", "hero": "viking", "req": 30,
+		"desc": "Recupera 30% da vida, acelera por 5s e abala os monstros em volta.",
+		"cooldown": 26.0, "cost": 50.0, "color": Color("ffd36b"), "glyph": "Va",
+	},
 }
 
 ## Habilidades miradas arrastando o botão.
-const AIMED := ["meteor", "multishot", "trap", "poison_arrow", "arrow_rain", "pierce_shot", "charge", "leap", "oil", "cannon", "blink"]
+const AIMED := ["axe_throw", "spear_toss", "shield_bash", "meteor", "multishot", "trap", "poison_arrow", "arrow_rain", "pierce_shot", "charge", "leap", "oil", "cannon", "blink"]
 
 
 ## As 6 novas de um herói, na ordem de nível.
 static func for_hero(hero_id: String) -> Array:
 	var ids: Array = []
 	for id in DEFS:
-		if DEFS[id]["hero"] == hero_id:
+		if DEFS[id]["hero"] == hero_id and not DEFS[id].get("base", false):
 			ids.append(id)
 	return ids
 
@@ -332,6 +378,72 @@ static func cast(id: String, game, power: float, reach: float, _repeat := false)
 			ball.pierce = 3
 			ball.burn_ticks = 3
 			ball.burn_damage = 6.0 * dm * power
+		"axe_throw":
+			var direction := Skills._aim_direction(game, 520.0 * reach)
+			var axe := _arrow(game, direction, "axe", color, wd * 2.4 * dm * power, 560.0, 0.9 * reach)
+			axe.radius = 16.0
+			axe.pierce = 3
+		"rage":
+			player.haste_time = 6.0 * power
+			player.heal(player.max_health * 0.1)
+			Skills._ring(game, 70.0 * reach, color, 0.5)
+		"thunder_slam":
+			for i in 5:
+				var blast := SkillEffects.Blast.new()
+				blast.radius = 90.0 * reach
+				blast.delay = 0.5 + 0.15 * i
+				blast.damage = (35.0 + wd * 1.8) * dm * power
+				blast.stun_time = 1.0
+				blast.color = color
+				blast.falling = "bolt"
+				world.add_child(blast)
+				blast.global_position = player.global_position + Vector2.from_angle(randf() * TAU) * randf_range(60.0, 200.0)
+		"shield_bash":
+			var direction := _direction(game, 300.0)
+			var center: Vector2 = player.global_position + direction * 70.0
+			Skills._ring(game, 90.0 * reach, color, 0.3, center)
+			for enemy in Skills.enemies_near(game, player.global_position, 160.0 * reach):
+				var offset: Vector2 = enemy.global_position - player.global_position
+				if absf(direction.angle_to(offset)) <= 0.9:
+					enemy.take_damage((22.0 + wd * 1.4) * dm * power, "skill")
+					if not enemy.is_queued_for_deletion():
+						enemy.stun(1.5)
+						enemy.knockback(direction * 360.0)
+		"battle_horn":
+			var radius := 300.0 * reach
+			Skills._ring(game, radius, color, 0.6)
+			for enemy in Skills.enemies_near(game, player.global_position, radius):
+				enemy.take_damage((6.0 + wd * 0.5) * dm * power, "skill")
+				if not enemy.is_queued_for_deletion():
+					enemy.apply_slow(0.4, 5.0 * (1.0 + (power - 1.0) * 0.5))
+		"spear_toss":
+			var direction := Skills._aim_direction(game, 520.0 * reach)
+			for i in 3:
+				var spear := _arrow(game, direction.rotated((i - 1) * 0.16), "arrow", color, wd * 1.8 * dm * power, 640.0, 0.9 * reach)
+				spear.radius = 10.0
+				spear.pierce = 2
+		"ironhide":
+			player.activate_shield(8.0, (80.0 + player.get_defense() * 5.0) * power)
+			Skills._ring(game, 70.0 * reach, color, 0.5)
+		"axe_whirl":
+			var orbit := SkillEffects.Orbit.new()
+			orbit.count = 3
+			orbit.orbit_radius = 120.0 * reach
+			orbit.contact_radius = 34.0
+			orbit.duration = 4.0 * power
+			orbit.interval = 0.25
+			orbit.spin = 7.0
+			orbit.damage = (14.0 + wd) * dm * power
+			orbit.color = color
+			player.add_child(orbit)
+		"valhalla":
+			player.heal(player.max_health * minf(0.3 * power, 0.8))
+			player.haste_time = 5.0 * power
+			Skills._ring(game, 240.0 * reach, color, 0.6)
+			for enemy in Skills.enemies_near(game, player.global_position, 240.0 * reach):
+				enemy.take_damage((20.0 + wd * 1.2) * dm * power, "skill")
+				if not enemy.is_queued_for_deletion():
+					enemy.knockback((enemy.global_position - player.global_position).normalized() * 380.0)
 
 
 ## Direção da habilidade: a mira escolhida ou, sem ela, a do herói.

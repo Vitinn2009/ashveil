@@ -12,6 +12,8 @@ const TABS := [
 	{"id": "monsters", "name": "Monstros"},
 	{"id": "drops", "name": "Drops"},
 	{"id": "attributes", "name": "Atributos"},
+	{"id": "prices", "name": "Preços"},
+	{"id": "account", "name": "Minha conta"},
 	{"id": "general", "name": "Geral"},
 ]
 
@@ -173,6 +175,10 @@ func show_tab(id: String) -> void:
 			_build_drops()
 		"attributes":
 			_build_attributes()
+		"prices":
+			_build_prices()
+		"account":
+			_build_account()
 		_:
 			_build_general()
 
@@ -189,6 +195,10 @@ func reset_current_tab() -> void:
 		"attributes":
 			Tuning.reset_group("player")
 			Tuning.reset_group("attrs")
+		"prices":
+			Tuning.reset_group("prices")
+		"account":
+			pass
 		_:
 			Tuning.reset_group("global")
 	show_tab(tab)
@@ -308,6 +318,213 @@ func _attribute_row(stat: String) -> HBoxContainer:
 			label.add_theme_color_override("font_color", Brand.GOLD))
 		row.add_child(box)
 	return row
+
+
+func _build_prices() -> void:
+	_content.add_child(Brand.make_label("Pacotes de diamantes (dinheiro de verdade): quantidade de diamantes e preço em reais", 14, Color("b8c9a0")))
+	for pack in Premium.PACKS:
+		var id: String = pack["id"]
+		var dia_base := float(pack["diamonds"])
+		var brl_base := float(pack["brl"])
+		var on_dia := func(value: float) -> void: Tuning.set_price(id + "_dia", value, dia_base)
+		var on_brl := func(value: float) -> void: Tuning.set_price(id + "_brl", value, brl_base)
+		_content.add_child(_row([String(pack["name"]) + " · diamantes", 1.0, 100000.0, 1.0], dia_base, Tuning.price(id + "_dia", dia_base), Tuning.data["prices"].has(id + "_dia"), on_dia))
+		_content.add_child(_row([String(pack["name"]) + " · preço (R$)", 0.0, 1000.0, 0.01], brl_base, Tuning.price(id + "_brl", brl_base), Tuning.data["prices"].has(id + "_brl"), on_brl))
+	var titles := {"hero": "Heróis pagos (diamantes)", "pet": "Pets pagos (diamantes)", "gear": "Equipamentos premium (diamantes)", "item": "Itens e pacotes (diamantes)"}
+	for kind in Premium.KINDS:
+		_content.add_child(Brand.make_label(String(titles[kind]), 14, Color("b8c9a0")))
+		for entry in Premium.entries_of(kind):
+			var id: String = entry["id"]
+			var base := float(entry["price"])
+			var color: Color = Item.RARITIES[int(entry["rarity"])]["color"] if kind == "gear" else Brand.PARCHMENT
+			var on_change := func(value: float) -> void: Tuning.set_price(id, value, base)
+			_content.add_child(_row([entry["name"], 0.0, 100000.0, 1.0], base, Tuning.price(id, base), Tuning.data["prices"].has(id), on_change, color))
+
+
+# --- Conta do administrador: nível, dinheiro, diamantes e equipamentos para a própria conta ---------
+
+var account_hero := ""
+var _account_message: Label
+
+
+func _build_account() -> void:
+	if account_hero == "":
+		account_hero = Session.hero_id
+	_content.add_child(Brand.make_label("Conta do administrador: tudo aqui vale para o seu próprio jogo (salvo na hora).", 14, Color("b8c9a0")))
+	var picker := HBoxContainer.new()
+	picker.add_theme_constant_override("separation", 6)
+	_content.add_child(picker)
+	for id in Heroes.ids():
+		var button := Brand.make_wood_button(Heroes.DATA[id]["name"], Vector2(0, 40), 16)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.toggle_mode = true
+		button.set_pressed_no_signal(id == account_hero)
+		button.pressed.connect(func() -> void:
+			account_hero = id
+			show_tab("account"))
+		picker.add_child(button)
+	var progress := Session.progress_for(account_hero)
+	var level_spin := _spin(1.0, 999.0, 1.0, float(progress["level"]))
+	var points_spin := _spin(0.0, 9999.0, 1.0, float(progress["points"]))
+	var apply_level := func() -> void: account_set_level(account_hero, int(level_spin.value), int(points_spin.value))
+	_content.add_child(_action_row("Nível do herói", level_spin, "Aplicar nível", apply_level))
+	_content.add_child(_action_row("Pontos de habilidade", points_spin, "Aplicar pontos", apply_level))
+	var gold_spin := _spin(0.0, 99999999.0, 100.0, float(Session.inventory.gold))
+	_content.add_child(_action_row("Ouro", gold_spin, "Definir ouro", func() -> void: account_set_gold(int(gold_spin.value))))
+	var diamond_spin := _spin(0.0, 9999999.0, 10.0, float(Session.diamonds))
+	_content.add_child(_action_row("Diamantes", diamond_spin, "Definir diamantes", func() -> void: account_set_diamonds(int(diamond_spin.value))))
+	var slot_picker := OptionButton.new()
+	for slot in Item.SLOTS:
+		slot_picker.add_item(Item.SLOT_NAMES[slot])
+		slot_picker.set_item_metadata(slot_picker.item_count - 1, slot)
+	var rarity_picker := OptionButton.new()
+	for rarity in Item.RARITIES:
+		rarity_picker.add_item(rarity["name"])
+	rarity_picker.select(Item.RARITIES.size() - 1)
+	var gear_row := HBoxContainer.new()
+	gear_row.add_theme_constant_override("separation", 8)
+	var gear_label := Brand.make_label("Equipamento", 17)
+	gear_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gear_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	gear_row.add_child(gear_label)
+	slot_picker.custom_minimum_size = Vector2(150, 42)
+	rarity_picker.custom_minimum_size = Vector2(130, 42)
+	gear_row.add_child(slot_picker)
+	gear_row.add_child(rarity_picker)
+	var give_one := Brand.make_wood_button("Dar 1", Vector2(90, 42), 15)
+	give_one.pressed.connect(func() -> void: account_give_item(String(slot_picker.get_item_metadata(slot_picker.selected)), rarity_picker.selected))
+	gear_row.add_child(give_one)
+	var give_all := Brand.make_wood_button("Dar todos", Vector2(110, 42), 15)
+	give_all.pressed.connect(func() -> void: account_give_all_slots(rarity_picker.selected))
+	gear_row.add_child(give_all)
+	_content.add_child(gear_row)
+	var quick := HFlowContainer.new()
+	quick.add_theme_constant_override("h_separation", 8)
+	quick.add_theme_constant_override("v_separation", 8)
+	_content.add_child(quick)
+	var shortcuts: Array = [
+		["+10.000 de ouro", func() -> void: account_set_gold(Session.inventory.gold + 10000)],
+		["+1.000 diamantes", func() -> void: account_set_diamonds(Session.diamonds + 1000)],
+		["Dar materiais e fragmentos", func() -> void: account_give_materials()],
+		["Liberar heróis e pets", func() -> void: account_unlock_all()],
+		["Liberar 50 fases", func() -> void: account_unlock_stages(50)],
+		["MÁXIMO EM TUDO", func() -> void: account_max_everything()],
+	]
+	for entry in shortcuts:
+		var button := Brand.make_wood_button(String(entry[0]), Vector2(0, 44), 15)
+		button.pressed.connect(entry[1])
+		quick.add_child(button)
+	_account_message = Brand.make_label("", 15, Color("ffe9a8"))
+	_account_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_content.add_child(_account_message)
+
+
+func _spin(min_value: float, max_value: float, step: float, value: float) -> SpinBox:
+	var box := SpinBox.new()
+	box.min_value = min_value
+	box.max_value = max_value
+	box.step = step
+	box.value = value
+	box.custom_minimum_size = Vector2(170, 42)
+	return box
+
+
+func _action_row(label_text: String, box: SpinBox, button_text: String, on_press: Callable) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var label := Brand.make_label(label_text, 17)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(label)
+	row.add_child(box)
+	var button := Brand.make_wood_button(button_text, Vector2(170, 42), 15)
+	button.pressed.connect(on_press)
+	row.add_child(button)
+	return row
+
+
+func _say(text: String) -> void:
+	if _account_message != null and is_instance_valid(_account_message):
+		_account_message.text = text
+
+
+func account_set_level(hero: String, level: int, points: int) -> void:
+	var current := Session.progress_for(hero)
+	Session.set_progress(hero, maxi(level, 1), 0.0, maxi(points, 0), maxi(int(current["earned"]), maxi(level, 1)))
+	Session.unlock_hero(hero)
+	Session.save_game()
+	_say("%s agora está no nível %d com %d pontos de habilidade." % [Heroes.get_hero(hero)["name"], level, points])
+
+
+func account_set_gold(amount: int) -> void:
+	Session.inventory.gold = maxi(amount, 0)
+	Session.inventory.changed.emit()
+	Session.save_game()
+	_say("Ouro: %d" % Session.inventory.gold)
+
+
+func account_set_diamonds(amount: int) -> void:
+	Session.diamonds = maxi(amount, 0)
+	Session.save_game()
+	_say("Diamantes: %d" % Session.diamonds)
+
+
+func account_give_item(slot: String, rarity: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var level := maxi(int(Session.progress_for(Session.hero_id)["level"]), 1)
+	var inventory := Session.inventory
+	if inventory.bag.size() >= inventory.bag_capacity:
+		inventory.bag_capacity = inventory.bag.size() + 1
+	var item := Item.create(rng, slot, 0, level, rarity, rarity)
+	inventory.add_item(item)
+	Session.save_game()
+	_say("Recebeu: %s (%s)" % [item.display_name(), item.rarity_name()])
+
+
+func account_give_all_slots(rarity: int) -> void:
+	for slot in Item.SLOTS:
+		account_give_item(slot, rarity)
+	_say("Recebeu um equipamento de cada tipo.")
+
+
+func account_give_materials() -> void:
+	var inventory := Session.inventory
+	inventory.add_material("stone", 99)
+	inventory.add_material("moonstone", 30)
+	inventory.add_material("scroll", 20)
+	inventory.add_material("key", 10)
+	for rarity in Item.RARITIES.size():
+		inventory.add_fragments(rarity, 999)
+	inventory.add_consumable("potion", 20)
+	Session.save_game()
+	_say("Recebeu pedras, pergaminhos, chaves, fragmentos e poções.")
+
+
+func account_unlock_all() -> void:
+	for id in Heroes.ids():
+		Session.unlock_hero(id)
+	for id in Pets.ids():
+		Session.grant_pet(id)
+	Session.save_game()
+	_say("Todos os heróis e pets estão liberados.")
+
+
+func account_unlock_stages(count: int) -> void:
+	for i in count:
+		Session.finish_mission(i, 3)
+	_say("As %d primeiras fases estão concluídas com 3 estrelas." % count)
+
+
+func account_max_everything() -> void:
+	for id in Heroes.ids():
+		account_set_level(id, 100, 200)
+	account_set_gold(99999999)
+	account_set_diamonds(9999999)
+	account_give_materials()
+	account_unlock_all()
+	account_unlock_stages(60)
+	_say("Máximo em tudo: nível 100 em todos os heróis, ouro, diamantes, materiais, pets e 60 fases.")
 
 
 func _build_general() -> void:
