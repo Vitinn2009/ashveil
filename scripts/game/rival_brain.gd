@@ -70,7 +70,7 @@ func configure(rival: Enemy, target: Player, rival_hero: String, difficulty: Str
 	# As habilidades seguem o progresso do jogador: as da lista abrem fase a fase e a última no nível 20.
 	skill_ids = []
 	var position := 0
-	for entry in Heroes.skill_entries(hero):
+	for entry in Heroes.default_entries(hero):
 		if int(entry["unlock_level"]) > 0:
 			if player_level >= int(entry["unlock_level"]):
 				skill_ids.append(entry["id"])

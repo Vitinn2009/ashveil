@@ -103,20 +103,25 @@ const AIMED := ["fire", "fire_arrows", "slash", "bomb", "paralysis"]
 
 
 static func is_aimed(id: String) -> bool:
-	return AIMED.has(id)
+	return AIMED.has(id) or SkillsExtra.AIMED.has(id)
+
+
+## Existe uma habilidade com esse nome (as do começo ou do segundo leque)?
+static func exists(id: String) -> bool:
+	return DEFS.has(id) or SkillsExtra.DEFS.has(id)
 
 
 static func def(id: String) -> Dictionary:
-	return DEFS[id]
+	return DEFS[id] if DEFS.has(id) else SkillsExtra.DEFS[id]
 
 
 static func cost_for(id: String) -> float:
-	return DEFS[id]["cost"]
+	return def(id)["cost"]
 
 
 ## Recarga total de uma habilidade, com cartas e atributos de recarga.
 static func cooldown_for(id: String, game) -> float:
-	return DEFS[id]["cooldown"] * game.cooldown_scale * game.player.skill_cooldown_mult() * (1.0 - COOLDOWN_PER_LEVEL * level_of(id, game))
+	return def(id)["cooldown"] * game.cooldown_scale * game.player.skill_cooldown_mult() * (1.0 - COOLDOWN_PER_LEVEL * level_of(id, game))
 
 
 ## Dispara a habilidade. Com a chance de x2, repete o efeito logo depois.
@@ -167,6 +172,8 @@ static func cast(id: String, game, repeat := false) -> void:
 				absorb += player.shield_hp
 			player.activate_shield(6.0, absorb)
 			_ring(game, 60.0 * reach, DEFS["shield"]["color"], 0.4)
+		_:
+			SkillsExtra.cast(id, game, power, reach, repeat)
 
 
 static func _ring(game, radius: float, color: Color, duration: float, at := Vector2.INF) -> void:

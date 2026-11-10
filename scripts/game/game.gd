@@ -87,6 +87,7 @@ var info_label: Label
 var toast_label: Label
 var choice_strip: ChoiceStrip
 var attack_button: AttackButton
+var dodge_button: DodgeButton
 var next_button: Button
 var camera: Camera2D
 var hurt_overlay: ColorRect
@@ -255,6 +256,7 @@ func _process(delta: float) -> void:
 	_update_shake(delta)
 	weapon.manual_held = attack_button.held or Input.is_key_pressed(KEY_SPACE)
 	attack_button.cooldown = weapon.cooldown_ratio()
+	dodge_button.cooldown = player.dodge_cooldown / Player.DODGE_COOLDOWN
 	if Stages.is_boss_stage(stage) and spawning and not boss_spawned and elapsed >= BOSS_ENTRANCE_SECONDS:
 		_start_boss_phase()
 	if spawning and elapsed >= mission_duration:
@@ -482,6 +484,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_try_cast_index(2)
 		KEY_4:
 			_try_cast_index(3)
+		KEY_SHIFT:
+			try_dodge()
 		KEY_Q:
 			_use_consumable("potion")
 		KEY_5:
@@ -529,7 +533,17 @@ func unlock_level_of(id: String) -> int:
 
 
 func is_unlocked(id: String) -> bool:
-	return level >= unlock_level_of(id) and stage_index + 1 > unlock_stage_of(id)
+	return level >= maxi(unlock_level_of(id), Heroes.skill_req(player.hero, id)) and stage_index + 1 > unlock_stage_of(id)
+
+
+## Esquiva: o dash do herói (todos podem), com +40% de esquiva por um instante.
+func try_dodge() -> bool:
+	if game_over or modal_open:
+		return false
+	if not player.try_dash():
+		return false
+	Sound.play("dodge")
+	return true
 
 
 ## Dispara uma habilidade se estiver liberada, fora de recarga e com energia.
@@ -1459,11 +1473,16 @@ func _build_hud() -> void:
 	attack_button = AttackButton.new()
 	attack_button.position = attack_center - attack_button.size * 0.5
 	cluster.add_child(attack_button)
+	# Esquiva: dash curto com +40% de esquiva, embaixo à esquerda do botão de ataque.
+	dodge_button = DodgeButton.new()
+	dodge_button.position = attack_center + Vector2(-108.0, 58.0) - Vector2(DodgeButton.SIZE, DodgeButton.SIZE) * 0.5
+	dodge_button.pressed.connect(try_dodge)
+	cluster.add_child(dodge_button)
 	var entries := Heroes.skill_entries(player.hero)
 	for i in entries.size():
 		var id: String = entries[i]["id"]
 		var button := SkillButton.new()
-		button.setup(id, str(i + 1), entries[i]["unlock_level"], unlock_stage_of(id))
+		button.setup(id, str(i + 1), maxi(int(entries[i]["unlock_level"]), Heroes.skill_req(player.hero, id)), unlock_stage_of(id))
 		button.cast_requested.connect(func(skill_id: String) -> void: try_cast(skill_id))
 		button.aim_changed.connect(_on_skill_aim_changed)
 		button.aim_cast_requested.connect(_on_skill_aim_cast)

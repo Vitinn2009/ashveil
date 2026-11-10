@@ -33,6 +33,8 @@ var unlocked_pet := ""
 var evolutions := {}
 ## Nível (0 a 5) de cada habilidade ativa de cada herói: {herói: {id da habilidade: nível}}.
 var skill_levels := {}
+## Habilidades equipadas de cada herói: {herói: [id, id, ...]} (uma por casa da barra). Vazio = as iniciais.
+var skill_loadout := {}
 ## Níveis da árvore de habilidades: {herói: {id do nó: nível}} (ver SkillTree).
 var skill_tree := {}
 ## Filtro de drops (botão Drop): tipos de item ignorados e raridades que viram fragmento sozinhas.
@@ -101,6 +103,7 @@ func reset_progress() -> void:
 	evolutions = {}
 	skill_tree = {}
 	skill_levels = {}
+	skill_loadout = {}
 	ignored_types = []
 	auto_fragment = [false, false, false, false, false]
 	pvp_wins = 0
@@ -168,6 +171,7 @@ func save_game() -> bool:
 		"evolutions": evolutions,
 		"skill_tree": skill_tree,
 		"skill_levels": skill_levels,
+		"skill_loadout": skill_loadout,
 		"ignored_types": ignored_types,
 		"auto_fragment": auto_fragment,
 		"pvp_wins": pvp_wins,
@@ -256,6 +260,7 @@ func load_game() -> bool:
 	evolutions = {}
 	skill_tree = {}
 	skill_levels = {}
+	skill_loadout = {}
 	ignored_types = []
 	auto_fragment = [false, false, false, false, false]
 	var saved_ignored = parsed.get("ignored_types", [])
@@ -267,6 +272,11 @@ func load_game() -> bool:
 	if saved_auto is Array:
 		for i in mini(saved_auto.size(), 5):
 			auto_fragment[i] = bool(saved_auto[i])
+	var saved_loadout = parsed.get("skill_loadout", {})
+	if saved_loadout is Dictionary:
+		for hero_key in saved_loadout:
+			if Heroes.DATA.has(str(hero_key)) and saved_loadout[hero_key] is Array:
+				skill_loadout[str(hero_key)] = saved_loadout[hero_key].map(func(entry) -> String: return str(entry))
 	pvp_wins = maxi(int(parsed.get("pvp_wins", 0)), 0)
 	pvp_losses = maxi(int(parsed.get("pvp_losses", 0)), 0)
 	var saved_skill_levels = parsed.get("skill_levels", {})
@@ -275,7 +285,7 @@ func load_game() -> bool:
 			if Heroes.DATA.has(str(hero_key)) and saved_skill_levels[hero_key] is Dictionary:
 				var skill_map := {}
 				for skill_id in saved_skill_levels[hero_key]:
-					if Skills.DEFS.has(str(skill_id)):
+					if Skills.exists(str(skill_id)):
 						skill_map[str(skill_id)] = clampi(int(saved_skill_levels[hero_key][skill_id]), 0, Skills.MAX_LEVEL)
 				skill_levels[str(hero_key)] = skill_map
 	var saved_tree = parsed.get("skill_tree", {})
@@ -550,7 +560,7 @@ func skill_level(hero: String, id: String) -> int:
 ## Sobe a habilidade um nível, gastando pontos de habilidade (1, 2, 3, 4 e 5 para os níveis 1 a 5).
 func upgrade_skill(hero: String, id: String) -> bool:
 	var level := skill_level(hero, id)
-	if level >= Skills.MAX_LEVEL or not Skills.DEFS.has(id):
+	if level >= Skills.MAX_LEVEL or not Skills.exists(id):
 		return false
 	var progress := progress_for(hero)
 	var cost := Skills.upgrade_cost(level)
@@ -560,5 +570,40 @@ func upgrade_skill(hero: String, id: String) -> bool:
 	if not skill_levels.has(hero):
 		skill_levels[hero] = {}
 	skill_levels[hero][id] = level + 1
+	_mark_dirty()
+	return true
+
+
+## Habilidades equipadas do herói, uma por casa da barra. Valores inválidos (habilidade que não é do herói,
+## repetida ou fora do lugar) voltam às iniciais daquela casa.
+func loadout_for(hero: String) -> Array:
+	var defaults := Heroes.default_entries(Heroes.get_hero(hero))
+	var pool := Heroes.skill_pool(Heroes.get_hero(hero))
+	var saved: Array = skill_loadout.get(hero, [])
+	var result: Array = []
+	for i in defaults.size():
+		var id: String = saved[i] if i < saved.size() else defaults[i]["id"]
+		if not pool.has(id) or result.has(id):
+			id = defaults[i]["id"]
+			if result.has(id):
+				for candidate in pool:
+					if not result.has(candidate) and not saved.has(candidate):
+						id = candidate
+						break
+		result.append(id)
+	return result
+
+
+## Equipa `id` na casa `slot` (0 a n-1). Se ela já estava em outra casa, as duas trocam de lugar.
+func equip_skill(hero: String, slot: int, id: String) -> bool:
+	var pool := Heroes.skill_pool(Heroes.get_hero(hero))
+	var current := loadout_for(hero)
+	if slot < 0 or slot >= current.size() or not pool.has(id):
+		return false
+	var other := current.find(id)
+	if other >= 0 and other != slot:
+		current[other] = current[slot]
+	current[slot] = id
+	skill_loadout[hero] = current
 	_mark_dirty()
 	return true

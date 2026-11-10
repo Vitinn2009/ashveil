@@ -103,6 +103,7 @@ func _run() -> void:
 	await _test_new_enemies_and_insane()
 	await _test_pvp_arena()
 	await _test_admin_panel()
+	await _test_new_skills_and_dodge()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -655,7 +656,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.35.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.36.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -839,6 +840,166 @@ func _first_spin_box(node: Node) -> SpinBox:
 		if found != null:
 			return found
 	return null
+
+func _test_new_skills_and_dodge() -> void:
+	print("[novas habilidades, equipar e esquiva]")
+	await _new_game()
+	_game.queue_free()
+	_game = null
+	await _frames(2)
+	Session.pvp = false
+	var total := 0
+	for hero_id in Heroes.ids():
+		var hero := Heroes.get_hero(hero_id)
+		var extras := SkillsExtra.for_hero(hero_id)
+		_check(extras.size() == 6, "%s tem 6 habilidades novas" % hero_id)
+		_check(Heroes.skill_pool(hero).size() == Heroes.default_entries(hero).size() + 6, "%s: o leque tem as iniciais e as 6 novas" % hero_id)
+		for id in extras:
+			var def: Dictionary = Skills.def(id)
+			_check(def["name"] != "" and def["desc"] != "" and int(def["req"]) >= 5 and Skills.is_aimed(id) in [true, false], "%s: %s está completa" % [hero_id, def["name"]])
+		_check(Session.loadout_for(hero_id) == Heroes.default_entries(hero).map(func(e: Dictionary) -> String: return e["id"]), "%s começa com as habilidades iniciais" % hero_id)
+	# Equipar e trocar.
+	Session.reset_progress()
+	_check(Session.equip_skill("mage", 0, "meteor") and Session.loadout_for("mage")[0] == "meteor", "equipar o Meteoro na casa 1 do mago")
+	var before: Array = Session.loadout_for("mage")
+	_check(Session.equip_skill("mage", 3, before[1]) and Session.loadout_for("mage")[1] == before[3], "equipar uma que já está em outra casa troca as duas")
+	_check(not Session.equip_skill("mage", 0, "charge") and not Session.equip_skill("mage", 9, "meteor"), "habilidade de outro herói ou casa inexistente não equipa")
+	# Cada habilidade nova roda sem erro e faz o que promete.
+	for hero_id in Heroes.ids():
+		Session.reset_progress()
+		Session.hero_id = hero_id
+		Session.set_progress(hero_id, 40, 0.0, 0, 40)
+		Session.stage_index = 6
+		_game = load("res://scenes/Game.tscn").instantiate()
+		add_child(_game)
+		await _frames(3)
+		_game.weapon.process_mode = Node.PROCESS_MODE_DISABLED
+		_game.player.accuracy_bonus = 1.0
+		_game.player.max_health = 1.0e7
+		_game.player.health = 1.0e5
+		_game.spawning = false
+		_game.boss_spawned = false
+		_clear_enemies()
+		for id in SkillsExtra.for_hero(hero_id):
+			_game.player.energy = _game.player.get_max_energy()
+			var dummies: Array = []
+			for i in 3:
+				var slime: Enemy = _spawn("slime", Vector2(90 + 40 * i, 30 * i - 30))
+				slime.max_health = 1.0e6
+				slime.health = 1.0e6
+				slime.speed = 0.0
+				dummies.append(slime)
+			var start: Vector2 = _game.player.global_position
+			Skills.cast(id, _game)
+			await _ticks(70)
+			total += 1
+			var hurt := false
+			for slime in dummies:
+				if is_instance_valid(slime) and slime.health < 1.0e6:
+					hurt = true
+			match id:
+				"meditation", "second_wind", "repair", "arrow_rain", "arcane_orb", "whirlwind", "turret", "oil", "trap", "mine", "warcry":
+					_check(true, "%s: usada sem erro" % id)
+				"blink", "charge", "leap":
+					_check(_game.player.global_position.distance_to(start) > 60.0 or id == "leap", "%s: move o herói" % id)
+				_:
+					_check(hurt, "%s: fere os monstros" % id)
+			for slime in dummies:
+				if is_instance_valid(slime):
+					slime.queue_free()
+			await _ticks(2)
+		_game.queue_free()
+		_game = null
+		await _frames(2)
+	_check(total == 24, "as 24 habilidades novas foram usadas (%d)" % total)
+	# Efeitos de cura, mina e torreta.
+	Session.reset_progress()
+	Session.hero_id = "gnome"
+	Session.set_progress("gnome", 40, 0.0, 0, 40)
+	_game = load("res://scenes/Game.tscn").instantiate()
+	add_child(_game)
+	await _frames(3)
+	_game.weapon.process_mode = Node.PROCESS_MODE_DISABLED
+	_game.player.accuracy_bonus = 1.0
+	_game.spawning = false
+	_game.boss_spawned = false
+	_clear_enemies()
+	var player: Player = _game.player
+	player.max_health = 1000.0
+	player.health = 100.0
+	_game.player.energy = 100.0
+	Skills.cast("repair", _game)
+	_check(player.health > 350.0 and player.shield_hp > 0.0, "o Kit de Reparos cura e dá escudo (%d de vida)" % player.health)
+	Skills.cast("mine", _game)
+	var victim: Enemy = _spawn("slime", Vector2(60, 0))
+	victim.speed = 0.0
+	victim.max_health = 1.0e6
+	victim.health = 1.0e6
+	await _ticks(40)
+	_check(victim.health < 1.0e6, "a mina explode no monstro que chega perto")
+	victim.queue_free()
+	# Esquiva.
+	_check(is_instance_valid(_game.dodge_button), "a partida tem o botão de esquiva")
+	player.health = 1.0e5
+	player.max_health = 1.0e7
+	var start_position := player.global_position
+	_check(player.try_dash(Vector2.RIGHT) and player.dodge_button_bonus() == 0.4, "esquivar faz o dash e sobe a esquiva em 40%")
+	_check(not player.try_dash(Vector2.RIGHT), "o dash tem recarga")
+	await _ticks(20)
+	_check(player.global_position.x - start_position.x > 150.0, "o dash leva o herói para a frente (%d px)" % (player.global_position.x - start_position.x))
+	var counter := {"n": 0}
+	player.dodged.connect(func() -> void: counter["n"] += 1)
+	player.dodge_window = 1.0
+	for i in 3000:
+		player.dodge_window = 1.0
+		player.take_damage(1.0, "hit", 0.0, true)
+	var rate: float = counter["n"] / 3000.0
+	_check(rate > 0.35 and rate < 0.45, "com a esquiva ligada, ~40%% dos golpes são evitados (%.1f%%), até os de perto" % (rate * 100.0))
+	player.dodge_window = 0.0
+	counter["n"] = 0
+	for i in 500:
+		player.take_damage(1.0, "hit", 0.0, true)
+	_check(counter["n"] == 0, "fora da janela, sem bônus (esse herói não tem esquiva própria)")
+	await _ticks(180)
+	_check(player.dodge_button_bonus() == 0.0 and player.try_dash(Vector2.LEFT), "depois da recarga dá para esquivar de novo")
+	await _ticks(180)
+	_game.dodge_button.pressed.emit()
+	_check(player.dodge_cooldown > 0.0, "tocar no botão de esquiva faz o dash")
+	# Todos os heróis esquivam.
+	for hero_id in Heroes.ids():
+		var tester := Player.new()
+		tester.hero_id = hero_id
+		tester.inventory = Session.inventory
+		add_child(tester)
+		await _frames(2)
+		_check(tester.try_dash(Vector2.UP), "%s pode esquivar" % hero_id)
+		tester.queue_free()
+	_game.queue_free()
+	_game = null
+	await _frames(2)
+	# Aba Habilidades: equipar de verdade.
+	Session.reset_progress()
+	Session.hero_id = "mage"
+	Session.set_progress("mage", 40, 0.0, 9, 40)
+	var panel := SkillUpgradePanel.new()
+	add_child(panel)
+	panel.refresh("mage")
+	await _frames(2)
+	_check(panel._rows.get_child_count() == 10 and panel._slot_buttons.size() == 4, "a aba lista as 10 habilidades do mago e 4 casas")
+	panel.select_slot(2)
+	panel._on_equip("chain_lightning")
+	_check(Session.loadout_for("mage")[2] == "chain_lightning", "escolher a casa 3 e equipar a Corrente Elétrica")
+	panel.queue_free()
+	# A partida usa o que foi equipado.
+	Session.stage_index = 6
+	_game = load("res://scenes/Game.tscn").instantiate()
+	add_child(_game)
+	await _frames(3)
+	_check(_game.skill_buttons.has("chain_lightning") and _game.is_unlocked("chain_lightning"), "a barra da partida mostra a habilidade equipada")
+	_game.queue_free()
+	_game = null
+	await _frames(2)
+	Session.stage_index = 0
 
 func _test_totem() -> void:
 	print("[totem curandeiro]")

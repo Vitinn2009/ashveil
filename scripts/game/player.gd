@@ -6,6 +6,8 @@ signal died
 ## O herói levou dano (já descontados defesa e escudo) ou esquivou do golpe.
 signal hit_taken(amount: float)
 signal dodged
+## O herói fez o dash do botão de esquiva.
+signal dashed
 
 const HP_PER_POINT := 12.0
 const ATTACK_PER_POINT := 0.08
@@ -46,6 +48,12 @@ const SKILL_POWER_PER_POINT := 0.12
 ## Energia: gasta pelas habilidades e recuperada com o tempo.
 const ENERGY_REGEN := 6.0
 const BASE_CRIT := 0.05
+## Esquiva (botão): distância e duração do dash, tempo em que a esquiva sobe, bônus e recarga.
+const DASH_DISTANCE := 190.0
+const DASH_TIME := 0.18
+const DODGE_WINDOW := 0.55
+const DODGE_BUTTON_BONUS := 0.4
+const DODGE_COOLDOWN := 2.5
 const CRIT_PER_LUCK := 0.01
 ## Destreza: cada ponto dá +1,2% de crítico e +1% de esquiva (esquiva máxima de 40%).
 const CRIT_PER_DEX := 0.012
@@ -100,6 +108,11 @@ var attack_buff_time := 0.0
 ## Teia da aranha: deixa o herói mais lento por um tempo.
 var slow_time := 0.0
 var slow_factor := 1.0
+var dash_time := 0.0
+var dodge_window := 0.0
+var dodge_cooldown := 0.0
+var _dash_dir := Vector2.RIGHT
+var _ghost_timer := 0.0
 var joystick: TouchJoystick
 var _dead := false
 var _sprite: Sprite2D
@@ -258,14 +271,14 @@ func add_attribute(stat: String) -> bool:
 func _physics_process(delta: float) -> void:
 	_clock += delta
 	_tick_buffs(delta)
-	var direction := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
-	var wasd := Vector2(
-		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
-		float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W)))
-	if wasd != Vector2.ZERO:
-		direction = wasd.normalized()
-	if joystick and joystick.output != Vector2.ZERO:
-		direction = joystick.output
+	_tick_dash(delta)
+	if dash_time > 0.0:
+		# Durante o dash o herói só desliza; o resto do movimento espera.
+		if global_position.length() > MAP_RADIUS:
+			global_position = global_position.limit_length(MAP_RADIUS)
+		_pull = Vector2.ZERO
+		return
+	var direction := input_direction()
 	var moving := direction.length() > 0.05
 	if moving:
 		facing = direction.normalized()
@@ -277,6 +290,98 @@ func _physics_process(delta: float) -> void:
 	_pull = Vector2.ZERO
 	var bob := sin(_clock * 12.0) * 2.0 if moving else sin(_clock * 3.0) * 0.8
 	_sprite.position.y = SPRITE_BASE_Y + bob
+
+
+# --- Esquiva (botão): dash curto e +40% de esquiva por um instante ---------------------------------
+
+## Direção que o jogador está pedindo (joystick, setas ou WASD); vazio se ele está parado.
+func input_direction() -> Vector2:
+	var direction := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var wasd := Vector2(
+		float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A)),
+		float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W)))
+	if wasd != Vector2.ZERO:
+		direction = wasd.normalized()
+	if joystick and joystick.output != Vector2.ZERO:
+		direction = joystick.output
+	return direction
+
+
+## Faz o dash (para onde o herói anda ou, parado, para onde olha). Todo herói pode; recarrega em 2,5s.
+## Durante o dash e logo depois, a chance de esquivar do golpe que vier sobe 40 pontos.
+func try_dash(direction := Vector2.ZERO) -> bool:
+	if _dead or dodge_cooldown > 0.0 or dash_time > 0.0:
+		return false
+	var dir := direction if direction != Vector2.ZERO else input_direction()
+	if dir.length() < 0.1:
+		dir = facing
+	_dash_dir = dir.normalized()
+	facing = _dash_dir
+	_sprite.flip_h = _dash_dir.x < -0.05
+	dash_time = DASH_TIME
+	dodge_window = DODGE_WINDOW
+	dodge_cooldown = DODGE_COOLDOWN
+	_ghost_timer = 0.0
+	dashed.emit()
+	return true
+
+
+func is_dashing() -> bool:
+	return dash_time > 0.0
+
+
+## Bônus da esquiva do botão: +40% enquanto a janela está aberta (não é reduzido contra golpes de perto).
+func dodge_button_bonus() -> float:
+	return DODGE_BUTTON_BONUS if dodge_window > 0.0 else 0.0
+
+
+func _tick_dash(delta: float) -> void:
+	if dodge_cooldown > 0.0:
+		dodge_cooldown = maxf(0.0, dodge_cooldown - delta)
+	if dodge_window > 0.0:
+		dodge_window = maxf(0.0, dodge_window - delta)
+	if dash_time <= 0.0:
+		return
+	dash_time = maxf(0.0, dash_time - delta)
+	global_position += _dash_dir * (DASH_DISTANCE / DASH_TIME) * delta
+	_ghost_timer -= delta
+	if _ghost_timer <= 0.0 and get_parent() != null:
+		_ghost_timer = 0.035
+		var ghost := DashGhost.new()
+		ghost.texture = _sprite.texture
+		ghost.sprite_scale = _sprite.scale
+		ghost.flip = _sprite.flip_h
+		ghost.offset = _sprite.position
+		get_parent().add_child(ghost)
+		ghost.global_position = global_position
+
+
+## Rastro do dash: uma cópia do herói que vai sumindo.
+class DashGhost extends Node2D:
+	var texture: Texture2D
+	var sprite_scale := Vector2.ONE
+	var flip := false
+	var offset := Vector2.ZERO
+	var _age := 0.0
+
+	func _ready() -> void:
+		z_index = 1
+
+	func _process(delta: float) -> void:
+		_age += delta
+		if _age >= 0.3:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		if texture == null:
+			return
+		var size := texture.get_size() * sprite_scale
+		var alpha := 0.45 * (1.0 - _age / 0.3)
+		# Largura negativa vira a imagem para o lado em que o herói olha.
+		var rect := Rect2(Vector2(offset.x + (size.x * 0.5 if flip else -size.x * 0.5), offset.y - size.y * 0.5), Vector2(-size.x if flip else size.x, size.y))
+		draw_texture_rect(texture, rect, false, Color(0.6, 0.85, 1.0, alpha))
 
 
 ## Puxão de um vórtice (px/s) neste quadro; quem puxa chama de novo a cada quadro.
@@ -312,6 +417,8 @@ func _tick_buffs(delta: float) -> void:
 		tint = Color(0.75, 1.0, 0.8)
 	if double_time > 0.0:
 		tint = tint * Color(1.0, 0.95, 0.7)
+	if dodge_window > 0.0:
+		tint = tint * Color(0.65, 0.9, 1.0, 0.8)
 	if _hurt_flash > 0.0:
 		tint = Color(1.0, 0.45, 0.45)
 	_sprite.modulate = tint
@@ -338,7 +445,7 @@ func activate_shield(duration: float, absorb: float) -> void:
 func take_damage(amount: float, kind := "hit", min_fraction := 0.0, melee := false) -> void:
 	if _dead:
 		return
-	if kind == "hit" and randf() < get_dodge_chance() * (MELEE_DODGE_FACTOR if melee else 1.0):
+	if kind == "hit" and randf() < get_dodge_chance() * (MELEE_DODGE_FACTOR if melee else 1.0) + dodge_button_bonus():
 		dodged.emit()
 		return
 	var defense := get_defense()

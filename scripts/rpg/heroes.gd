@@ -10,6 +10,7 @@ const UNLOCK_LEVEL := 20
 
 const DATA := {
 	"mage": {
+		"id": "mage",
 		"name": "Mago",
 		"title": "Mestre dos elementos",
 		"description": "Frágil, mas domina três magias. Ataca de longe com projéteis arcanos.",
@@ -33,6 +34,7 @@ const DATA := {
 		"base_dex": 1,
 	},
 	"archer": {
+		"id": "archer",
 		"name": "Arqueiro",
 		"title": "Atirador veloz",
 		"description": "Ágil e preciso. Suas flechas atravessam o primeiro inimigo.",
@@ -56,6 +58,7 @@ const DATA := {
 		"base_luck": 0,
 	},
 	"warrior": {
+		"id": "warrior",
 		"name": "Guerreiro",
 		"title": "Muralha de aço",
 		"description": "Resistente e corpo a corpo. Golpeia só à frente, na direção em que anda: quanto mais perto do inimigo, mais dano.",
@@ -78,6 +81,7 @@ const DATA := {
 		"base_luck": 0,
 	},
 	"gnome": {
+		"id": "gnome",
 		"name": "Gnomo",
 		"title": "Velho engenheiro pirata",
 		"description": "Lento, mas cheio de ferramentas. Seu bacamarte solta 4 fragmentos, a mochila carrega mais itens e a sorte é maior.",
@@ -110,12 +114,43 @@ static func get_hero(id: String) -> Dictionary:
 	return Tuning.hero(id, DATA.get(id, DATA["warrior"]))
 
 
-## Todas as habilidades do herói em ordem: as liberadas desde o início e,
-## por último, a que destrava no nível 20. Cada entrada: {id, unlock_level}.
-static func skill_entries(hero: Dictionary) -> Array:
+## As habilidades iniciais do herói em ordem: as liberadas desde o começo e, por último, a que destrava
+## no nível 20. Cada entrada: {id, unlock_level}.
+static func default_entries(hero: Dictionary) -> Array:
 	var entries: Array = []
 	for id in hero["skills"]:
 		entries.append({"id": id, "unlock_level": 0})
 	var unlock: Dictionary = hero["unlock"]
 	entries.append({"id": unlock["id"], "unlock_level": unlock["level"]})
 	return entries
+
+
+## As casas de habilidade da partida, com o que o jogador equipou em cada uma (aba Habilidades). A trava
+## de cada casa é a da posição dela: fase 2, 3... e a última, nível 20.
+static func skill_entries(hero: Dictionary) -> Array:
+	var entries := default_entries(hero)
+	var hero_id: String = hero.get("id", "")
+	if hero_id == "":
+		return entries
+	var loadout: Array = Session.loadout_for(hero_id)
+	for i in entries.size():
+		entries[i]["id"] = loadout[i]
+	return entries
+
+
+## Todas as habilidades que o herói pode equipar: as iniciais, a do nível 20 e as 6 do segundo leque.
+static func skill_pool(hero: Dictionary) -> Array:
+	var pool: Array = []
+	for entry in default_entries(hero):
+		pool.append(entry["id"])
+	for id in SkillsExtra.for_hero(hero.get("id", "")):
+		pool.append(id)
+	return pool
+
+
+## Nível mínimo do herói para usar a habilidade: o do segundo leque, ou o da habilidade de nível 20.
+static func skill_req(hero: Dictionary, id: String) -> int:
+	if SkillsExtra.DEFS.has(id):
+		return int(SkillsExtra.DEFS[id]["req"])
+	var unlock: Dictionary = hero["unlock"]
+	return int(unlock["level"]) if unlock["id"] == id else 0

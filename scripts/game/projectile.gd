@@ -10,6 +10,9 @@ var radius := 6.0
 var pierce := 0
 var burn_ticks := 0
 var burn_damage := 0.0
+## Veneno (Flecha Venenosa): dano a cada segundo.
+var poison_ticks := 0
+var poison_damage := 0.0
 ## Tipo de golpe nos inimigos: "hit" (pode errar, pelo acerto do herói) ou "skill" (nunca erra, como os tiros do pet).
 var hit_kind := "hit"
 var _already_hit: Array = []
@@ -41,6 +44,8 @@ func _physics_process(delta: float) -> void:
 			enemy.take_damage(damage, hit_kind)
 			if burn_ticks > 0 and not enemy.is_queued_for_deletion():
 				enemy.apply_burn(burn_ticks, burn_damage)
+			if poison_ticks > 0 and not enemy.is_queued_for_deletion():
+				enemy.apply_poison(poison_ticks, poison_damage)
 			_already_hit.append(enemy)
 			if pierce <= 0:
 				queue_free()
