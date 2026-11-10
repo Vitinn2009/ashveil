@@ -11,6 +11,8 @@ const SHOP_WIDTH := 690.0
 ## Altura da barra de cima (voltar, título, ouro) e da de baixo (próxima missão e Partir).
 const TOP_BAR := 56.0
 const BOTTOM_BAR := 76.0
+## Largura da coluna de abas (Mercado, Habilidades...) no canto direito.
+const RAIL_WIDTH := 140.0
 const SIDE_WIDTH := 316.0
 ## Largura da caixa de atributos do herói (o menu da direita começa logo depois dela).
 const STATS_WIDTH := 212.0
@@ -68,6 +70,7 @@ var _minimized := false
 var _skills_panel: SkillsPanel
 var _bestiary_panel: BestiaryPanel
 var _inventory_window: InventoryWindow
+var _stats_panel: PanelContainer
 var _preview: Player
 
 
@@ -201,14 +204,17 @@ func _build_side_panel(hero: Dictionary) -> void:
 	plaque_box.add_child(_level_label)
 
 	# Atributos do herói, no alto, entre a mochila e o menu.
-	var stats_panel := Brand.make_wood_panel(10, Color(Brand.WOOD, 0.92))
-	stats_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	stats_panel.position = Vector2(SIDE_WIDTH + 36.0, TOP_BAR + 10.0)
-	stats_panel.custom_minimum_size = Vector2(STATS_WIDTH, 0)
-	add_child(stats_panel)
+	_stats_panel = Brand.make_wood_panel(10, Color(Brand.WOOD, 0.92))
+	_stats_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_stats_panel.position = Vector2(SIDE_WIDTH + 36.0, TOP_BAR + 10.0)
+	_stats_panel.custom_minimum_size = Vector2(STATS_WIDTH, 0)
+	add_child(_stats_panel)
+	# Os atributos abrem e fecham pelo botão "Atributos" do cabeçalho da mochila; começam fechados.
+	_stats_panel.visible = false
+	_inventory_window.attributes_toggled.connect(set_attributes_open)
 	var stats_box := VBoxContainer.new()
 	stats_box.add_theme_constant_override("separation", 6)
-	stats_panel.add_child(stats_box)
+	_stats_panel.add_child(stats_box)
 	var stats_title := Brand.make_label("ATRIBUTOS DO HERÓI", 14, Brand.GOLD)
 	stats_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats_box.add_child(stats_title)
@@ -217,18 +223,6 @@ func _build_side_panel(hero: Dictionary) -> void:
 	_hero_stats.add_theme_constant_override("h_separation", 10)
 	_hero_stats.add_theme_constant_override("v_separation", 3)
 	stats_box.add_child(_hero_stats)
-
-	# Trocar de herói e menu principal, no pé da tela, entre a mochila e o menu.
-	var buttons := VBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 6)
-	buttons.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	buttons.offset_left = SIDE_WIDTH + 36.0
-	buttons.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	buttons.offset_bottom = -(BOTTOM_BAR + 10.0)
-	add_child(buttons)
-	var back := Brand.make_wood_button("Trocar de herói", Vector2(190, 40), 15)
-	back.pressed.connect(func() -> void: _leave(SELECT_SCENE))
-	buttons.add_child(back)
 
 
 # --- Barras de cima e de baixo ---------------------------------------------------
@@ -261,6 +255,10 @@ func _build_bars() -> void:
 	var bottom_row := HBoxContainer.new()
 	bottom_row.add_theme_constant_override("separation", 16)
 	bottom.add_child(bottom_row)
+	# Trocar de herói fica no canto esquerdo da barra de baixo.
+	var swap_button := Brand.make_wood_button("Trocar de herói", Vector2(190, 56), 18)
+	swap_button.pressed.connect(func() -> void: _leave(SELECT_SCENE))
+	bottom_row.add_child(swap_button)
 	_next_label = Brand.make_label("", 18, Brand.PARCHMENT)
 	_next_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -287,8 +285,8 @@ func _build_center_stage() -> void:
 	_right_column.anchor_right = 1.0
 	_right_column.anchor_top = 0.0
 	_right_column.anchor_bottom = 1.0
-	_right_column.offset_left = SIDE_WIDTH + 36.0 + STATS_WIDTH + 10.0
-	_right_column.offset_right = -16.0
+	_right_column.offset_left = SIDE_WIDTH + 36.0
+	_right_column.offset_right = -(16.0 + RAIL_WIDTH + 8.0)
 	_right_column.offset_top = TOP_BAR + 10.0
 	_right_column.offset_bottom = -(BOTTOM_BAR + 10.0)
 	add_child(_right_column)
@@ -418,28 +416,13 @@ func _build_shop_panel() -> void:
 	_right_column.add_child(_menu_panel)
 	_right_column.move_child(_menu_panel, 0)
 	_menu_spacer = Control.new()
-	_menu_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_menu_spacer.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_right_column.add_child(_menu_spacer)
 	_right_column.move_child(_menu_spacer, 1)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	_menu_panel.add_child(column)
-
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 4)
-	column.add_child(header)
-	for entry in MENU_ENTRIES:
-		var button := Brand.make_wood_button(entry["name"], Vector2(0, 44), 12)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.toggle_mode = entry["id"] != "backpack"
-		button.pressed.connect(show_menu.bind(entry["id"]))
-		_menu_buttons[entry["id"]] = button
-		header.add_child(button)
-	_minimize_button = Brand.make_wood_button("—", Vector2(46, 44), 18)
-	_minimize_button.tooltip_text = "Minimizar o menu"
-	_minimize_button.pressed.connect(toggle_minimized)
-	header.add_child(_minimize_button)
 
 	_menu_content = VBoxContainer.new()
 	_menu_content.add_theme_constant_override("separation", 8)
@@ -473,19 +456,21 @@ func _build_shop_panel() -> void:
 	_bestiary_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pages["bestiary"] = _bestiary_panel
 	_menu_content.add_child(_bestiary_panel)
-	# Com o menu minimizado, atalhos em coluna abaixo do botão Menu abrem cada página direto.
+	# Abas na lateral direita: cada uma abre só a sua página, e tocar de novo na aba aberta fecha.
 	_shortcuts = VBoxContainer.new()
 	_shortcuts.add_theme_constant_override("separation", 8)
 	_shortcuts.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_shortcuts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_shortcuts.offset_right = -16.0
-	_shortcuts.offset_left = -(16.0 + 150.0)
-	_shortcuts.offset_top = 100.0
+	_shortcuts.offset_left = -(16.0 + RAIL_WIDTH)
+	_shortcuts.offset_top = TOP_BAR + 10.0
 	add_child(_shortcuts)
 	for entry in MENU_ENTRIES:
-		var shortcut := Brand.make_wood_button(entry["name"], Vector2(150, 52), 16)
-		shortcut.pressed.connect(show_menu.bind(entry["id"]))
-		_shortcuts.add_child(shortcut)
+		var tab := Brand.make_wood_button(entry["name"], Vector2(RAIL_WIDTH, 56), 17)
+		tab.toggle_mode = true
+		tab.pressed.connect(_on_tab_pressed.bind(entry["id"]))
+		_menu_buttons[entry["id"]] = tab
+		_shortcuts.add_child(tab)
 	_apply_menu()
 
 
@@ -533,6 +518,18 @@ func _build_market_page() -> Control:
 	return column
 
 
+## Abre ou fecha o painel de atributos do herói (botão Atributos da mochila). A página da direita
+## ocupa o espaço que sobrar.
+func set_attributes_open(open: bool) -> void:
+	_stats_panel.visible = open
+	_inventory_window.sync_attributes_button(open)
+	_right_column.offset_left = SIDE_WIDTH + 36.0 + (STATS_WIDTH + 10.0 if open else 0.0)
+
+
+func is_attributes_open() -> bool:
+	return _stats_panel.visible
+
+
 ## Abre uma página do menu. A mochila abre a janela do inventário (no canto direito) por cima.
 func show_menu(id: String) -> void:
 	if _minimized:
@@ -564,26 +561,25 @@ func current_page() -> String:
 	return _page
 
 
-## Mostra a página escolhida (ou só o botão "Menu", minimizado) e recentra a escolha de fase.
+## Mostra só a página da aba escolhida (ou nenhuma, com o menu fechado). As abas ficam sempre à vista, na lateral.
 func _apply_menu() -> void:
 	for id in _pages:
 		_pages[id].visible = not _minimized and id == _page
 	for id in _menu_buttons:
 		var button: Button = _menu_buttons[id]
-		button.visible = not _minimized
-		if button.toggle_mode:
-			button.set_pressed_no_signal(id == _page)
+		button.set_pressed_no_signal(not _minimized and id == _page)
 	_menu_content.visible = not _minimized
+	_menu_panel.visible = not _minimized
 	if _shortcuts != null:
-		_shortcuts.visible = _minimized
-	_minimize_button.text = "Menu" if _minimized else "—"
-	_minimize_button.custom_minimum_size = Vector2(110 if _minimized else 46, 44)
-	# Aberto, o menu estica até a caixa de fase; minimizado, vira só o botão no canto.
-	_menu_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if _minimized else Control.SIZE_EXPAND_FILL
-	_menu_panel.size_flags_horizontal = Control.SIZE_SHRINK_END if _minimized else Control.SIZE_FILL
-	_menu_panel.custom_minimum_size = Vector2(150.0 if _minimized else 0.0, 0)
-	_menu_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL if _minimized else Control.SIZE_SHRINK_BEGIN
-	_menu_spacer.custom_minimum_size = Vector2.ZERO
+		_shortcuts.visible = true
+
+
+## Tocar numa aba abre a página dela; tocar de novo na aba aberta fecha.
+func _on_tab_pressed(id: String) -> void:
+	if not _minimized and _page == id:
+		toggle_minimized()
+	else:
+		show_menu(id)
 
 
 func select_category(id: String) -> void:
@@ -952,7 +948,7 @@ func _refresh_pet() -> void:
 ## Páginas de tamanho fixo (habilidades e ferreiro) rolam quando o menu é baixo.
 func _scroll_wrap(page: Control) -> ScrollContainer:
 	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.add_child(page)
 	return scroll

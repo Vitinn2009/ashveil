@@ -229,7 +229,7 @@ func load_game() -> bool:
 			if Heroes.DATA.has(str(hero_key)) and saved_perm[hero_key] is Dictionary:
 				var points := {}
 				for stat in saved_perm[hero_key]:
-					points[str(stat)] = clampi(int(saved_perm[hero_key][stat]), 0, Player.MAX_ATTRIBUTE_POINTS)
+					points[str(stat)] = clampi(int(saved_perm[hero_key][stat]), 0, Player.attribute_cap())
 				perm_attributes[str(hero_key)] = points
 	hero_progress = {}
 	var saved_progress = parsed.get("hero_progress", {})

@@ -136,11 +136,17 @@ func _ready() -> void:
 	health_changed.emit(health, max_health)
 
 
+## Máximo de pontos gastos em um atributo (editável no painel admin).
+static func attribute_cap() -> int:
+	return int(Tuning.player("max_attribute_points", MAX_ATTRIBUTE_POINTS))
+
+
 ## Pontos do atributo: gastos + equipamentos (+ a sorte própria do herói), com limite.
 func stat_points(stat: String) -> int:
 	var total := int(attributes[stat]) + inventory.bonus(stat)
 	total += int(hero.get("base_" + stat, 0)) + int(pet_stats.get(stat, 0)) + int(evolution_bonus.get(stat, 0)) + int(tree_bonus.get(stat, 0))
-	return clampi(total, 0, MAX_TOTAL_POINTS)
+	total += Tuning.attr(stat, "base", 0)
+	return clampi(total, Tuning.attr(stat, "min", 0), Tuning.attr(stat, "max", MAX_TOTAL_POINTS))
 
 
 func get_max_energy() -> float:
@@ -166,7 +172,7 @@ func get_points(group: String, stat: String) -> int:
 
 
 func can_add_point(group: String, stat: String) -> bool:
-	var cap := MAX_SKILL_POINTS if group == "skill" else MAX_ATTRIBUTE_POINTS
+	var cap := MAX_SKILL_POINTS if group == "skill" else attribute_cap()
 	return get_points(group, stat) < cap
 
 
@@ -198,7 +204,7 @@ func skill_power_mult() -> float:
 
 
 func get_max_health() -> float:
-	return hero["health"] + card_health + stat_points("hp") * HP_PER_POINT
+	return hero["health"] + card_health + stat_points("hp") * Tuning.player("hp_per_point", HP_PER_POINT)
 
 
 func get_defense() -> float:
@@ -206,7 +212,7 @@ func get_defense() -> float:
 
 
 func get_damage_mult() -> float:
-	return 1.0 + stat_points("attack") * ATTACK_PER_POINT
+	return 1.0 + stat_points("attack") * Tuning.player("attack_per_point", ATTACK_PER_POINT)
 
 
 ## Velocidade de movimento (px/s): base do herói, cartas, pontos e velocidade (com a magia Velocidade)
@@ -214,7 +220,7 @@ func get_damage_mult() -> float:
 func get_move_speed() -> float:
 	var haste := 1.5 if haste_time > 0.0 else 1.0
 	var web := slow_factor if slow_time > 0.0 else 1.0
-	var raw: float = hero["speed"] * card_speed_mult * minf(1.0 + stat_points("speed") * SPEED_PER_POINT, MAX_SPEED_MULT) * haste
+	var raw: float = hero["speed"] * card_speed_mult * minf(1.0 + stat_points("speed") * Tuning.player("speed_per_point", SPEED_PER_POINT), Tuning.player("max_speed_mult", MAX_SPEED_MULT)) * haste
 	var ceiling: float = float(hero.get("max_speed", DEFAULT_MAX_SPEED)) * (1.25 if haste_time > 0.0 else 1.0)
 	return minf(raw, ceiling) * web * fatigue_factor()
 
@@ -222,16 +228,16 @@ func get_move_speed() -> float:
 func get_attack_speed_mult() -> float:
 	var haste := 1.4 if haste_time > 0.0 else 1.0
 	var food := FOOD_ATTACK_BONUS if attack_buff_time > 0.0 else 1.0
-	return minf(1.0 + stat_points("aspd") * ATTACK_SPEED_PER_POINT, MAX_ATTACK_SPEED_MULT) * haste * food
+	return minf(1.0 + stat_points("aspd") * Tuning.player("aspd_per_point", ATTACK_SPEED_PER_POINT), Tuning.player("max_aspd_mult", MAX_ATTACK_SPEED_MULT)) * haste * food
 
 
 ## Chance de acerto crítico: 5% de base, +1% por ponto de sorte e o que as melhorias derem.
 func get_crit_chance() -> float:
-	return clampf(BASE_CRIT + get_luck() * CRIT_PER_LUCK + get_dexterity() * CRIT_PER_DEX + stat_points("crit") * CRIT_PER_POINT + card_crit, 0.0, 0.8 if card_crit < 1.0 else 1.0)
+	return clampf(Tuning.player("base_crit", BASE_CRIT) + get_luck() * Tuning.player("crit_per_luck", CRIT_PER_LUCK) + get_dexterity() * Tuning.player("crit_per_dex", CRIT_PER_DEX) + stat_points("crit") * Tuning.player("crit_per_point", CRIT_PER_POINT) + card_crit, 0.0, 0.8 if card_crit < 1.0 else 1.0)
 
 
 func crit_multiplier() -> float:
-	return BASE_CRIT_MULT + card_crit_mult + (inventory.bonus("critdmg") + int(tree_bonus.get("critdmg", 0))) * Item.CRIT_DAMAGE_PER_POINT * 0.01
+	return Tuning.player("base_crit_mult", BASE_CRIT_MULT) + card_crit_mult + (inventory.bonus("critdmg") + int(tree_bonus.get("critdmg", 0))) * Item.CRIT_DAMAGE_PER_POINT * 0.01
 
 
 func get_dexterity() -> int:
@@ -239,7 +245,7 @@ func get_dexterity() -> int:
 
 
 func get_dodge_chance() -> float:
-	return minf(get_dexterity() * DODGE_PER_DEX, MAX_DODGE)
+	return minf(get_dexterity() * Tuning.player("dodge_per_dex", DODGE_PER_DEX), Tuning.player("max_dodge", MAX_DODGE))
 
 
 func get_luck() -> int:
@@ -247,11 +253,11 @@ func get_luck() -> int:
 
 
 func get_xp_mult() -> float:
-	return minf(1.0 + get_luck() * XP_PER_LUCK, 4.0)
+	return minf(1.0 + get_luck() * Tuning.player("xp_per_luck", XP_PER_LUCK), 4.0)
 
 
 func get_drop_mult() -> float:
-	return minf(1.0 + get_luck() * DROP_PER_LUCK, 3.0)
+	return minf(1.0 + get_luck() * Tuning.player("drop_per_luck", DROP_PER_LUCK), 3.0)
 
 
 ## Recalcula a vida máxima depois de mudar atributos, equipamentos ou cartas.
@@ -485,7 +491,7 @@ func raise_max_health(amount: float) -> void:
 ## Chance de o golpe do herói acertar: a base do herói (o arqueiro é o que mais erra) mais 2% por
 ## ponto de Destreza. Os golpes que erram aparecem como "Errou".
 func get_accuracy() -> float:
-	return minf(float(hero.get("accuracy", 0.9)) + get_dexterity() * ACCURACY_PER_DEX + accuracy_bonus, MAX_ACCURACY if accuracy_bonus < 1.0 else 1.0)
+	return minf(float(hero.get("accuracy", 0.9)) + get_dexterity() * Tuning.player("accuracy_per_dex", ACCURACY_PER_DEX) + accuracy_bonus, Tuning.player("max_accuracy", MAX_ACCURACY) if accuracy_bonus < 1.0 else 1.0)
 
 
 func get_max_stamina() -> float:
@@ -515,7 +521,7 @@ func tick_stamina(delta: float, moving: bool) -> void:
 ## Roubo de vida: cada ponto devolve 0,4% do dano causado como vida (no máximo 6%), e cada golpe cura no
 ## máximo 2% da vida máxima (ver Game._on_damage_dealt).
 func get_lifesteal() -> float:
-	return clampf((inventory.bonus("lifesteal") + int(tree_bonus.get("lifesteal", 0))) * LIFESTEAL_PER_POINT, 0.0, LIFESTEAL_CAP)
+	return clampf((inventory.bonus("lifesteal") + int(tree_bonus.get("lifesteal", 0))) * LIFESTEAL_PER_POINT, 0.0, Tuning.player("lifesteal_cap", LIFESTEAL_CAP))
 
 
 ## Refletir (despertar da armadura): fração do dano recebido que volta ao atacante (no máximo 60%).

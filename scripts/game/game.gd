@@ -177,25 +177,29 @@ func _ready() -> void:
 	world.y_sort_enabled = true
 	world.modulate = stage["tint"]
 	add_child(world)
-	var border := MapBorder.new()
 	if Session.pvp:
-		border.radius = ARENA_RADIUS
-	world.add_child(border)
-
-	ground = GroundLayer.new()
-	world.add_child(ground)
+		# Arena PvP: o cenário é um coliseu (piso de areia, muro, arquibancadas), sem grama nem árvores.
+		var arena := ArenaFloor.new()
+		arena.radius = ARENA_RADIUS
+		world.add_child(arena)
+	else:
+		world.add_child(MapBorder.new())
+		ground = GroundLayer.new()
+		world.add_child(ground)
 
 	player = Player.new()
 	player.hero_id = Session.hero_id
 	# O inventário é o mesmo do castelo: o que se ganha na missão fica com o herói.
 	player.inventory = Session.inventory
 	world.add_child(player)
-	ground.follow = player
+	if ground != null:
+		ground.follow = player
 
-	decor = WorldDecor.new()
-	decor.world = world
-	decor.follow = player
-	add_child(decor)
+	if not Session.pvp:
+		decor = WorldDecor.new()
+		decor.world = world
+		decor.follow = player
+		add_child(decor)
 
 	weapon = Weapon.new()
 	player.add_child(weapon)

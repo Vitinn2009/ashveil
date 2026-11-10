@@ -104,6 +104,7 @@ func _run() -> void:
 	await _test_pvp_arena()
 	await _test_admin_panel()
 	await _test_new_skills_and_dodge()
+	await _test_admin_attributes_and_arena()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -656,7 +657,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.36.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.37.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -1000,6 +1001,74 @@ func _test_new_skills_and_dodge() -> void:
 	_game = null
 	await _frames(2)
 	Session.stage_index = 0
+
+func _test_admin_attributes_and_arena() -> void:
+	print("[admin: atributos e cenário da arena]")
+	Tuning.save_enabled = false
+	Tuning.reset_all()
+	Session.reset_progress()
+	var tester := Player.new()
+	tester.hero_id = "warrior"
+	tester.inventory = Session.inventory
+	add_child(tester)
+	await _frames(2)
+	var base_health: float = tester.get_max_health()
+	tester.attributes["hp"] = 10
+	var with_points: float = tester.get_max_health()
+	_check(is_equal_approx(with_points - base_health, 10.0 * Player.HP_PER_POINT), "padrão: cada ponto de Vida dá %d de vida" % Player.HP_PER_POINT)
+	Tuning.set_player("hp_per_point", 30.0)
+	_check(is_equal_approx(tester.get_max_health() - base_health, 300.0), "mudar a vida por ponto no painel muda o cálculo do herói")
+	Tuning.set_player("hp_per_point", Player.HP_PER_POINT)
+	_check(not Tuning.data["player"].has("hp_per_point"), "voltar ao padrão remove o ajuste")
+	tester.attributes["hp"] = 0
+	Tuning.set_attr("attack", "base", 5)
+	_check(tester.stat_points("attack") == 5, "atributo padrão: 5 pontos iniciais de Ataque")
+	Tuning.set_attr("attack", "max", 3)
+	_check(tester.stat_points("attack") == 3, "o máximo do atributo limita (5 viram 3)")
+	Tuning.set_attr("attack", "max", 100)
+	Tuning.set_attr("attack", "base", 0)
+	Tuning.set_attr("luck", "min", 4)
+	_check(tester.stat_points("luck") >= 4, "o mínimo do atributo vale (Sorte nunca abaixo de 4)")
+	Tuning.set_player("max_attribute_points", 3.0)
+	tester.attributes["speed"] = 3
+	_check(not tester.can_add_point("hero", "speed") and Player.attribute_cap() == 3, "o máximo de pontos gastos por atributo é editável")
+	Tuning.reset_all()
+	_check(Player.attribute_cap() == Player.MAX_ATTRIBUTE_POINTS and tester.stat_points("luck") == int(tester.hero.get("base_luck", 0)), "restaurar tudo devolve os padrões")
+	tester.queue_free()
+	# A aba Atributos do painel.
+	Tuning.unlocked = true
+	var panel := AdminPanel.new()
+	add_child(panel)
+	await _frames(2)
+	panel.show_tab("attributes")
+	await _frames(2)
+	_check(_count_spin_boxes(panel._content) >= 19 + 27, "a aba Atributos tem as regras gerais e inicial/mín./máx. dos 9 atributos (%d campos)" % _count_spin_boxes(panel._content))
+	var spin := _first_spin_box(panel._content)
+	spin.value = spin.value + 1.0
+	_check(not Tuning.data["player"].is_empty(), "editar um campo da aba grava o ajuste")
+	panel.reset_current_tab()
+	_check(Tuning.data["player"].is_empty() and Tuning.data["attrs"].is_empty(), "restaurar a aba limpa as regras e os limites")
+	panel.queue_free()
+	Tuning.unlocked = false
+	# Cenário da arena.
+	Session.reset_progress()
+	Session.hero_id = "warrior"
+	Session.pvp = true
+	Session.pvp_rival = "mage"
+	var arena_game: Node = load("res://scenes/Game.tscn").instantiate()
+	add_child(arena_game)
+	await _frames(4)
+	var floor_found := false
+	var grass_found := false
+	for child in arena_game.world.get_children():
+		if child is ArenaFloor:
+			floor_found = true
+		if child is GroundLayer or child is MapBorder:
+			grass_found = true
+	_check(floor_found and not grass_found and arena_game.decor == null, "a arena é um coliseu: piso de arena, sem grama nem árvores")
+	arena_game.queue_free()
+	Session.pvp = false
+	await _frames(2)
 
 func _test_totem() -> void:
 	print("[totem curandeiro]")
@@ -1836,11 +1905,49 @@ func _test_castle_menu() -> void:
 	# Minimizar.
 	castle.toggle_minimized()
 	await _frames(2)
-	_check(castle.is_minimized() and not castle._menu_content.visible and not castle._menu_buttons["skills"].visible, "minimizar esconde o menu")
-	_check(castle._menu_panel.get_global_rect().size.x < 200.0 and castle._menu_panel.get_global_rect().size.y < 100.0, "e sobra só o botão Menu (%dx%d)" % [castle._menu_panel.get_global_rect().size.x, castle._menu_panel.get_global_rect().size.y])
+	_check(castle.is_minimized() and not castle._menu_content.visible and not castle._menu_panel.visible, "fechar a aba esconde a página")
+	_check(castle._menu_buttons["skills"].visible and castle._menu_buttons["forge"].visible, "as abas laterais continuam à vista")
 	var minimized_center: float = castle._go_button.get_global_rect().get_center().x
 	var go_center: float = go_rect.get_center().x
 	_check(absf(minimized_center - go_center) < 2.0, "com o menu fechado, o botão Partir continua no mesmo lugar")
+	castle._menu_buttons["forge"].pressed.emit()
+	await _frames(2)
+	var open_pages := 0
+	for page_id in castle._pages:
+		if castle._pages[page_id].visible:
+			open_pages += 1
+	_check(not castle.is_minimized() and castle.current_page() == "forge" and open_pages == 1 and castle._pages["forge"].visible, "tocar em Ferreiro abre só a página do Ferreiro")
+	castle._menu_buttons["forge"].pressed.emit()
+	await _frames(2)
+	_check(castle.is_minimized() and not castle._menu_panel.visible, "tocar de novo na aba aberta fecha a página")
+	var rail: Rect2 = castle._shortcuts.get_global_rect()
+	castle._menu_buttons["runes"].pressed.emit()
+	await _frames(2)
+	var page_rect: Rect2 = castle._menu_panel.get_global_rect()
+	_check(page_rect.end.x <= rail.position.x + 1.0, "a página aberta não passa por cima das abas (%d <= %d)" % [page_rect.end.x, rail.position.x])
+	# Cabeçalho da mochila: botões Mochila e Atributos, e o menu suspenso.
+	var window: InventoryWindow = castle._inventory_window
+	_check(window._bag_toggle != null and window._attributes_toggle != null, "o cabeçalho da mochila tem os botões Mochila e Atributos")
+	_check(not castle.is_attributes_open() and not castle._stats_panel.visible, "os atributos do herói começam fechados")
+	window._attributes_toggle.button_pressed = true
+	await _frames(2)
+	_check(castle.is_attributes_open() and castle._stats_panel.visible, "o botão Atributos abre o painel de atributos")
+	var left_open: float = castle._right_column.offset_left
+	window._attributes_toggle.button_pressed = false
+	await _frames(2)
+	_check(not castle.is_attributes_open() and castle._right_column.offset_left < left_open, "e fecha de novo, devolvendo o espaço à página da direita")
+	_check(window.is_bag_open() and window._bag_column.visible, "a mochila começa aberta")
+	window._bag_toggle.button_pressed = false
+	await _frames(2)
+	_check(not window.is_bag_open() and not window._bag_column.visible, "o botão Mochila fecha a grade de itens")
+	window._bag_toggle.button_pressed = true
+	_check(not window.is_dropdown_open(), "o menu suspenso começa fechado")
+	window._dropdown_button.button_pressed = true
+	await _frames(2)
+	_check(window.is_dropdown_open() and window._fragments_label.is_inside_tree() and window._info.is_inside_tree(), "o menu suspenso abre com fragmentos, poções e detalhes do item")
+	window._dropdown_button.button_pressed = false
+	_check(not window.is_dropdown_open(), "e fecha de novo")
+	_check(castle._next_label.get_parent().get_child(0) is Button and castle._next_label.get_parent().get_child(0).text == "Trocar de herói", "Trocar de herói fica na barra de baixo")
 	castle.show_menu("skills")
 	await _frames(2)
 	_check(not castle.is_minimized() and castle.current_page() == "skills", "escolher uma opção reabre o menu")

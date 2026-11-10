@@ -11,6 +11,7 @@ const TABS := [
 	{"id": "heroes", "name": "Heróis"},
 	{"id": "monsters", "name": "Monstros"},
 	{"id": "drops", "name": "Drops"},
+	{"id": "attributes", "name": "Atributos"},
 	{"id": "general", "name": "Geral"},
 ]
 
@@ -170,6 +171,8 @@ func show_tab(id: String) -> void:
 			_build_monsters()
 		"drops":
 			_build_drops()
+		"attributes":
+			_build_attributes()
 		_:
 			_build_general()
 
@@ -183,6 +186,9 @@ func reset_current_tab() -> void:
 		"drops":
 			Tuning.reset_group("rarity")
 			Tuning.reset_group("drops")
+		"attributes":
+			Tuning.reset_group("player")
+			Tuning.reset_group("attrs")
 		_:
 			Tuning.reset_group("global")
 	show_tab(tab)
@@ -262,6 +268,46 @@ func _build_drops() -> void:
 		var base := float(spec[1]) * 100.0
 		var current := Tuning.drop(key, float(spec[1])) * 100.0
 		_content.add_child(_row([spec[0], 0.0, 100.0, 0.1], base, current, Tuning.data["drops"].has(key), func(value: float) -> void: Tuning.set_drop(key, value / 100.0)))
+
+
+func _build_attributes() -> void:
+	_content.add_child(Brand.make_label("Efeito de cada ponto e limites do herói (o padrão é o valor original do jogo)", 14, Color("b8c9a0")))
+	var fields := Tuning.player_fields()
+	for key in fields:
+		var spec: Array = fields[key]
+		var base := float(spec[4])
+		var current := Tuning.player(key, base)
+		_content.add_child(_row([spec[0], spec[1], spec[2], spec[3]], base, current, Tuning.data["player"].has(key), func(value: float) -> void: Tuning.set_player(key, value)))
+	_content.add_child(Brand.make_label("Cada atributo: pontos iniciais (padrão), mínimo e máximo que o herói pode ter (soma de pontos, equipamento e bônus)", 14, Color("b8c9a0")))
+	for stat in Tuning.ATTRIBUTES:
+		_content.add_child(_attribute_row(stat))
+
+
+## Uma linha por atributo, com três campos: inicial, mínimo e máximo.
+func _attribute_row(stat: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var edited: bool = Tuning.data["attrs"].has(stat)
+	var label := Brand.make_label(String(Tuning.ATTRIBUTE_NAMES[stat]), 17, Brand.GOLD if edited else Brand.PARCHMENT)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(label)
+	for field in [["base", "inicial", 0, 0, 100], ["min", "mín.", 0, 0, 100], ["max", "máx.", 100, 1, 999]]:
+		var caption := Brand.make_label(String(field[1]), 13, Color("8f8a78"))
+		caption.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(caption)
+		var box := SpinBox.new()
+		box.min_value = float(field[3])
+		box.max_value = float(field[4])
+		box.step = 1.0
+		box.custom_minimum_size = Vector2(110, 42)
+		box.value = float(Tuning.attr(stat, field[0], int(field[2])))
+		var field_name: String = field[0]
+		box.value_changed.connect(func(value: float) -> void:
+			Tuning.set_attr(stat, field_name, int(value))
+			label.add_theme_color_override("font_color", Brand.GOLD))
+		row.add_child(box)
+	return row
 
 
 func _build_general() -> void:

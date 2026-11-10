@@ -10,6 +10,8 @@ signal closed
 signal consumable_used(id: String)
 ## O jogador tocou num equipamento (da mochila ou vestido): o Ferreiro mostra os atributos dele.
 signal item_selected(item: Item)
+## O botão Atributos do cabeçalho (castelo) foi ligado ou desligado.
+signal attributes_toggled(shown: bool)
 
 const SLOT := 40.0
 ## Casas de equipamento (maiores) e o desenho do bloco do herói, como no Surve RPG.
@@ -76,6 +78,11 @@ var _fragments_label: RichTextLabel
 var _materials_label: Label
 var _key_button: Button
 var _close_button: Button
+var _bag_toggle: Button
+var _attributes_toggle: Button
+var _bag_column: Control
+var _dropdown: PanelContainer
+var _dropdown_button: Button
 var _consumable_slots := {}
 
 
@@ -163,13 +170,16 @@ func _build() -> void:
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 10)
-	var ribbon := Ribbon.new("MOCHILA", 32)
-	ribbon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(ribbon)
-	_close_button = Brand.make_wood_button("X", Vector2(52, 44), 22)
-	_close_button.pressed.connect(close)
-	_close_button.visible = not embedded
-	header.add_child(_close_button)
+	if embedded:
+		header = _build_embedded_header()
+		_close_button = Brand.make_wood_button("X", Vector2(52, 44), 22)
+	else:
+		var ribbon := Ribbon.new("MOCHILA", 32)
+		ribbon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header.add_child(ribbon)
+		_close_button = Brand.make_wood_button("X", Vector2(52, 44), 22)
+		_close_button.pressed.connect(close)
+		header.add_child(_close_button)
 	column.add_child(header)
 
 	var body := VBoxContainer.new()
@@ -185,9 +195,96 @@ func _build() -> void:
 	column.add_child(page_scroll)
 	content.add_child(body)
 	body.add_child(_build_equipment_column())
-	body.add_child(_build_bag_column())
+	_bag_column = _build_bag_column()
+	body.add_child(_bag_column)
 
-	content.add_child(_build_info_area())
+	var info_area := _build_info_area()
+	if embedded:
+		# No castelo, frascos, fragmentos e detalhes do item ficam num menu suspenso embaixo da mochila.
+		_build_dropdown(column, info_area)
+	else:
+		content.add_child(info_area)
+
+
+## Cabeçalho da mochila no castelo: um botão abre e fecha a mochila (a grade de itens) e outro, os atributos.
+func _build_embedded_header() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_bag_toggle = Brand.make_wood_button("Mochila", Vector2(0, 44), 17)
+	_bag_toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_bag_toggle.toggle_mode = true
+	_bag_toggle.set_pressed_no_signal(true)
+	_bag_toggle.tooltip_text = "Abrir ou fechar a mochila"
+	_bag_toggle.toggled.connect(set_bag_open)
+	row.add_child(_bag_toggle)
+	_attributes_toggle = Brand.make_wood_button("Atributos", Vector2(0, 44), 17)
+	_attributes_toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_attributes_toggle.toggle_mode = true
+	_attributes_toggle.tooltip_text = "Abrir ou fechar os atributos do herói"
+	_attributes_toggle.toggled.connect(func(on: bool) -> void: attributes_toggled.emit(on))
+	row.add_child(_attributes_toggle)
+	return row
+
+
+## Abre ou fecha a grade da mochila (as casas de equipamento e o herói continuam à vista).
+func set_bag_open(open: bool) -> void:
+	if _bag_column != null:
+		_bag_column.visible = open
+	if _bag_toggle != null:
+		_bag_toggle.set_pressed_no_signal(open)
+
+
+func is_bag_open() -> bool:
+	return _bag_column == null or _bag_column.visible
+
+
+## O castelo avisa quando abre ou fecha os atributos por outro caminho, para o botão acompanhar.
+func sync_attributes_button(shown: bool) -> void:
+	if _attributes_toggle != null:
+		_attributes_toggle.set_pressed_no_signal(shown)
+
+
+## Menu suspenso: um botão no pé da mochila abre uma caixa com os fragmentos, as poções e comidas, os
+## materiais e os detalhes do item escolhido.
+func _build_dropdown(main_column: VBoxContainer, info_area: Control) -> void:
+	_dropdown_button = Brand.make_wood_button("Itens e detalhes", Vector2(0, 40), 15)
+	_dropdown_button.toggle_mode = true
+	_dropdown_button.tooltip_text = "Fragmentos, poções, materiais e detalhes do item"
+	_dropdown_button.toggled.connect(set_dropdown_open)
+	main_column.add_child(_dropdown_button)
+	_dropdown = PanelContainer.new()
+	var style := Brand.make_box(Color(Brand.WOOD, 0.99), Brand.BRASS, 3, 8)
+	style.set_content_margin_all(10)
+	_dropdown.add_theme_stylebox_override("panel", style)
+	_dropdown.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_dropdown.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_dropdown.offset_left = 22.0
+	_dropdown.offset_right = 10.0 + DOCK_WIDTH
+	_dropdown.offset_bottom = -(dock_bottom + 62.0)
+	_dropdown.visible = false
+	add_child(_dropdown)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, 290)
+	_dropdown.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	scroll.add_child(box)
+	box.add_child(_fragments_label)
+	box.add_child(_consumable_row)
+	box.add_child(info_area)
+
+
+func set_dropdown_open(open: bool) -> void:
+	if _dropdown == null:
+		return
+	_dropdown.visible = open
+	_dropdown_button.set_pressed_no_signal(open)
+
+
+func is_dropdown_open() -> bool:
+	return _dropdown != null and _dropdown.visible
 
 
 ## Equipamento no estilo do Surve RPG: o herói no meio, a arma, as luvas e o anel à esquerda, o colar,
@@ -277,7 +374,8 @@ func _build_bag_column() -> Control:
 	_fragments_label.add_theme_font_size_override("normal_font_size", 12)
 	_fragments_label.add_theme_color_override("default_color", Brand.PARCHMENT)
 	_fragments_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(_fragments_label)
+	if not embedded:
+		box.add_child(_fragments_label)
 
 	_consumable_row = HBoxContainer.new()
 	_consumable_row.add_theme_constant_override("separation", 6)
@@ -295,7 +393,8 @@ func _build_bag_column() -> Control:
 	_key_button.pressed.connect(_on_key_pressed)
 	extras.add_child(_key_button)
 	_consumable_row.add_child(extras)
-	box.add_child(_consumable_row)
+	if not embedded:
+		box.add_child(_consumable_row)
 	return box
 
 
@@ -568,6 +667,8 @@ func _select(item: Item, equipped: bool) -> void:
 	_selected = item
 	_selected_equipped = equipped
 	_trash_armed = false
+	if embedded and item != null:
+		set_dropdown_open(true)
 	item_selected.emit(item)
 	_refresh()
 

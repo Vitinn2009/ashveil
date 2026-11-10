@@ -16,7 +16,7 @@ func _ready() -> void:
 	get_viewport().get_texture().get_image().save_png("%s/admin_login.png" % out)
 	panel._password.text = "admin"
 	panel.submit_password()
-	for tab_id in ["heroes", "drops"]:
+	for tab_id in ["attributes", "drops"]:
 		panel.show_tab(tab_id)
 		for i in 4:
 			await get_tree().process_frame

@@ -48,12 +48,80 @@ const GLOBAL_FIELDS := {
 	"gold": ["Ouro ganho (x)", 0.1, 10.0, 0.05],
 }
 
+## Os 9 atributos que o herói distribui em pontos, e os nomes deles.
+const ATTRIBUTES := ["hp", "defense", "attack", "speed", "luck", "dex", "crit", "aspd", "stamina"]
+const ATTRIBUTE_NAMES := {
+	"hp": "Vida", "defense": "Defesa", "attack": "Ataque", "speed": "Velocidade", "luck": "Sorte",
+	"dex": "Destreza", "crit": "Crítico", "aspd": "Vel. de ataque", "stamina": "Resistência",
+}
+
+
+## Regras gerais dos atributos do herói: {chave: [nome, mínimo, máximo, passo, padrão]}. Os padrões vêm das
+## constantes do Player, então o painel mostra sempre o valor original do código.
+static func player_fields() -> Dictionary:
+	return {
+		"hp_per_point": ["Vida por ponto de Vida", 0.0, 200.0, 0.5, Player.HP_PER_POINT],
+		"attack_per_point": ["Dano por ponto de Ataque (fração)", 0.0, 1.0, 0.005, Player.ATTACK_PER_POINT],
+		"speed_per_point": ["Velocidade por ponto (fração)", 0.0, 0.5, 0.005, Player.SPEED_PER_POINT],
+		"aspd_per_point": ["Vel. de ataque por ponto (fração)", 0.0, 0.5, 0.005, Player.ATTACK_SPEED_PER_POINT],
+		"crit_per_point": ["Crítico por ponto de Crítico", 0.0, 0.2, 0.001, Player.CRIT_PER_POINT],
+		"crit_per_luck": ["Crítico por ponto de Sorte", 0.0, 0.2, 0.001, Player.CRIT_PER_LUCK],
+		"crit_per_dex": ["Crítico por ponto de Destreza", 0.0, 0.2, 0.001, Player.CRIT_PER_DEX],
+		"dodge_per_dex": ["Esquiva por ponto de Destreza", 0.0, 0.2, 0.001, Player.DODGE_PER_DEX],
+		"accuracy_per_dex": ["Precisão por ponto de Destreza", 0.0, 0.2, 0.001, Player.ACCURACY_PER_DEX],
+		"xp_per_luck": ["XP por ponto de Sorte", 0.0, 1.0, 0.005, Player.XP_PER_LUCK],
+		"drop_per_luck": ["Drops por ponto de Sorte", 0.0, 1.0, 0.005, Player.DROP_PER_LUCK],
+		"base_crit": ["Chance de crítico inicial", 0.0, 1.0, 0.01, Player.BASE_CRIT],
+		"base_crit_mult": ["Dano do crítico inicial (x)", 1.0, 10.0, 0.05, Player.BASE_CRIT_MULT],
+		"max_speed_mult": ["Máximo de velocidade (x)", 1.0, 5.0, 0.05, Player.MAX_SPEED_MULT],
+		"max_aspd_mult": ["Máximo de vel. de ataque (x)", 1.0, 8.0, 0.05, Player.MAX_ATTACK_SPEED_MULT],
+		"max_dodge": ["Esquiva máxima", 0.0, 0.95, 0.01, Player.MAX_DODGE],
+		"max_accuracy": ["Precisão máxima", 0.1, 1.0, 0.01, Player.MAX_ACCURACY],
+		"lifesteal_cap": ["Roubo de vida máximo", 0.0, 1.0, 0.005, Player.LIFESTEAL_CAP],
+		"max_attribute_points": ["Máximo de pontos gastos por atributo", 1.0, 999.0, 1.0, float(Player.MAX_ATTRIBUTE_POINTS)],
+	}
+
+
+## Valor geral do herói (ver player_fields) com o ajuste por cima.
+func player(key: String, base: float) -> float:
+	return float(data["player"].get(key, base))
+
+
+## Pontos iniciais ("base"), mínimo ("min") e máximo ("max") de um atributo do herói.
+func attr(stat: String, field: String, base: int) -> int:
+	var overrides: Dictionary = data["attrs"].get(stat, {})
+	return int(overrides.get(field, base))
+
+
+func set_player(key: String, value: float) -> void:
+	var base := float(player_fields()[key][4])
+	if is_equal_approx(value, base):
+		data["player"].erase(key)
+	else:
+		data["player"][key] = value
+	_commit()
+
+
+func set_attr(stat: String, field: String, value: int) -> void:
+	var default := {"base": 0, "min": 0, "max": 100}
+	var entry: Dictionary = data["attrs"].get(stat, {})
+	if value == int(default[field]):
+		entry.erase(field)
+	else:
+		entry[field] = value
+	if entry.is_empty():
+		data["attrs"].erase(stat)
+	else:
+		data["attrs"][stat] = entry
+	_commit()
+
+
 var save_enabled := true
 var save_path := "user://ashveil_admin.json"
 var unlocked := false
 ## Só o que foi alterado: {"heroes": {id: {campo: valor}}, "monsters": {...}, "rarity": {"0": peso},
 ## "drops": {chave: valor}, "global": {chave: valor}}.
-var data := {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}}
+var data := {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}}
 var _hero_cache := {}
 var _monster_cache := {}
 
@@ -142,7 +210,7 @@ func _set_override(group: String, id: String, field: String, value: float, base:
 
 
 func reset_all() -> void:
-	data = {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}}
+	data = {"heroes": {}, "monsters": {}, "rarity": {}, "drops": {}, "global": {}, "player": {}, "attrs": {}}
 	_commit()
 
 

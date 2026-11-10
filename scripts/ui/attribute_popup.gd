@@ -131,7 +131,7 @@ func _refresh() -> void:
 		var stat: String = entry["id"]
 		var row: Dictionary = _rows[stat]
 		var points := _player.get_points("hero", stat)
-		row["value"].text = "%d / %d" % [points, Player.MAX_ATTRIBUTE_POINTS]
+		row["value"].text = "%d / %d" % [points, Player.attribute_cap()]
 		row["plus"].disabled = points_left <= 0 or not _player.can_add_point("hero", stat)
 	_confirm.disabled = points_left > 0 and _any_can_grow()
 	_confirm.text = "Confirmar" if not _confirm.disabled else "Gaste todos os pontos"
