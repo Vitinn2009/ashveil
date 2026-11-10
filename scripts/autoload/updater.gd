@@ -8,8 +8,8 @@ extends Node
 signal state_changed
 
 ## Versão instalada (mantenha igual a version/name e version/code do export_presets.cfg).
-const VERSION := "0.38.0"
-const VERSION_CODE := 41
+const VERSION := "0.39.0"
+const VERSION_CODE := 42
 ## "usuario/repositorio" no GitHub. Vazio = atualização desligada.
 const REPO := "Vitinn2009/ashveil"
 const TIMEOUT := 12.0

@@ -38,6 +38,8 @@ const TYPES := {
 var follow: Node2D
 var world: Node2D
 var world_seed := 0
+## Cenário da fase (ver Biomes). Vazio ou floresta: o cenário original.
+var biome := {}
 var _chunks := {}
 var _center := Vector2i(1 << 20, 1 << 20)
 var _textures := {}
@@ -51,6 +53,9 @@ func _ready() -> void:
 	_noise.frequency = 0.35
 	for kind in TYPES:
 		_textures[kind] = load(TYPES[kind]["path"])
+	if _is_biome():
+		for kind in Biomes.decor_textures_needed(biome):
+			_textures[kind] = Biomes.decor_texture(kind)
 	_refresh()
 
 
@@ -82,6 +87,8 @@ func plan_chunk(chunk: Vector2i) -> Array:
 	var origin := Vector2(chunk) * CHUNK_SIZE
 	var center := origin + Vector2.ONE * CHUNK_SIZE * 0.5
 	# Ruído suave define florestas densas e clareiras.
+	if _is_biome():
+		return _plan_biome(chunk, rng, origin, center)
 	var forest := remap(_noise.get_noise_2d(center.x / CHUNK_SIZE, center.y / CHUNK_SIZE), -1.0, 1.0, 0.08, 0.6)
 	var plan: Array = []
 
@@ -101,6 +108,36 @@ func plan_chunk(chunk: Vector2i) -> Array:
 	return plan
 
 
+## Cenário diferente da floresta (deserto, neve, vulcão, pântano ou cripta): objetos e densidade vêm do
+## cenário (ver Biomes). A densidade ainda varia com o ruído, para ter trechos cheios e clareiras.
+func _plan_biome(chunk: Vector2i, rng: RandomNumberGenerator, origin: Vector2, center: Vector2) -> Array:
+	var plan: Array = []
+	var density := remap(_noise.get_noise_2d(center.x / CHUNK_SIZE, center.y / CHUNK_SIZE), -1.0, 1.0, 0.4, 1.5) * float(biome["big_density"])
+	var big: Array = biome["big"]
+	var total := 0.0
+	for entry in big:
+		total += float(entry[1])
+	var cell_size := CHUNK_SIZE / CELLS
+	for cy in CELLS:
+		for cx in CELLS:
+			if rng.randf() < density:
+				var roll := rng.randf() * total
+				var kind: String = big[0][0]
+				for entry in big:
+					roll -= float(entry[1])
+					if roll <= 0.0:
+						kind = entry[0]
+						break
+				plan.append(_entry(kind, origin + Vector2(cx + rng.randf(), cy + rng.randf()) * cell_size))
+	_scatter(plan, rng, origin, biome["small"], rng.randi_range(1, int(biome["small_count"])))
+	_scatter(plan, rng, origin, biome["ground_decor"], int(biome["ground_count"]) + rng.randi_range(0, 2))
+	return plan
+
+
+func _type(kind: String) -> Dictionary:
+	return TYPES[kind] if TYPES.has(kind) else Biomes.DECOR_TYPES[kind]
+
+
 func _scatter(plan: Array, rng: RandomNumberGenerator, origin: Vector2, kinds: Array, count: int) -> void:
 	for i in count:
 		var kind: String = kinds[rng.randi() % kinds.size()]
@@ -108,7 +145,7 @@ func _scatter(plan: Array, rng: RandomNumberGenerator, origin: Vector2, kinds: A
 
 
 func _entry(kind: String, point: Vector2) -> Dictionary:
-	return {"kind": kind, "position": point, "ground": TYPES[kind]["ground"]}
+	return {"kind": kind, "position": point, "ground": _type(kind)["ground"]}
 
 
 func _refresh() -> void:
@@ -143,7 +180,7 @@ func _unload_chunk(chunk: Vector2i) -> void:
 
 func _make_sprite(entry: Dictionary, rng: RandomNumberGenerator) -> Sprite2D:
 	var kind: String = entry["kind"]
-	var data: Dictionary = TYPES[kind]
+	var data: Dictionary = _type(kind)
 	var sprite := Sprite2D.new()
 	var texture: Texture2D = _textures[kind]
 	sprite.texture = texture
@@ -157,5 +194,11 @@ func _make_sprite(entry: Dictionary, rng: RandomNumberGenerator) -> Sprite2D:
 		sprite.z_index = GROUND_Z
 		if kind == "tuft" or kind.begins_with("flowers"):
 			sprite.modulate = Color.WHITE.lerp(Color(0.8, 0.9, 0.75), rng.randf() * 0.5)
+	if data.has("tint"):
+		sprite.modulate = data["tint"]
 	world.add_child(sprite)
 	return sprite
+
+
+func _is_biome() -> bool:
+	return biome.has("big")

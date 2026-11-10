@@ -31,6 +31,37 @@ static func make_button(text: String, min_size := Vector2(260, 64)) -> Button:
 	return button
 
 
+## Ícones de interface (SVG em assets/ui/icons), carregados uma vez só.
+static var _icon_cache := {}
+
+
+static func icon(icon_name: String) -> Texture2D:
+	if not _icon_cache.has(icon_name):
+		_icon_cache[icon_name] = load("res://assets/ui/icons/%s.svg" % icon_name)
+	return _icon_cache[icon_name]
+
+
+## Põe um ícone à esquerda do texto do botão.
+static func with_icon(button: Button, icon_name: String, icon_size := 24) -> Button:
+	button.icon = icon(icon_name)
+	button.expand_icon = true
+	button.add_theme_constant_override("icon_max_width", icon_size)
+	button.add_theme_constant_override("h_separation", 8)
+	return button
+
+
+## Um ícone solto (para ficar ao lado de um texto, como a moeda no saldo).
+static func icon_rect(icon_name: String, icon_size := 24) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.texture = icon(icon_name)
+	rect.custom_minimum_size = Vector2(icon_size, icon_size)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+
 ## Botão no estilo medieval: couro com borda de latão.
 static func make_wood_button(text: String, min_size := Vector2(0, 40), font_size := 16) -> Button:
 	var button := Button.new()

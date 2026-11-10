@@ -223,11 +223,11 @@ static func index_of(stage: Dictionary) -> int:
 
 
 static func hp_scale(stage: Dictionary, elapsed: float) -> float:
-	return float(stage["hp_mult"]) * HP_BOOST * easiness(index_of(stage)) * (1.0 + HP_STEP_PER_STAGE * index_of(stage)) * (1.0 + float(stage["hp_growth"]) * elapsed)
+	return float(stage["hp_mult"]) * HP_BOOST * easiness(index_of(stage)) * (1.0 + HP_STEP_PER_STAGE * index_of(stage)) * late_hp(index_of(stage)) * (1.0 + float(stage["hp_growth"]) * elapsed)
 
 
 static func damage_scale(stage: Dictionary, elapsed: float) -> float:
-	return float(stage["dmg_mult"]) * DAMAGE_BOOST * easiness(index_of(stage)) * (1.0 + DAMAGE_STEP_PER_STAGE * index_of(stage)) * (1.0 + float(stage["dmg_growth"]) * elapsed)
+	return float(stage["dmg_mult"]) * DAMAGE_BOOST * easiness(index_of(stage)) * (1.0 + DAMAGE_STEP_PER_STAGE * index_of(stage)) * late_dmg(index_of(stage)) * (1.0 + float(stage["dmg_growth"]) * elapsed)
 
 
 ## Nota da fase, de 0 (perdeu) a 3.
@@ -244,12 +244,13 @@ static func stars(stage: Dictionary, won: bool, kills: int, health_ratio: float)
 
 ## Facilidade das primeiras fases: a fase 1 tem só 35% da força (vida, dano e defesa) e a quantidade de
 ## inimigos e a meta de abates também são menores; sobe de forma contínua até a fase 13, que já vale 100%.
-const EASE_START := 0.35
-const EASE_STAGES := 12.0
+const EASE_START := 0.26
+const EASE_STAGES := 14.0
 
 
 static func easiness(index: int) -> float:
-	return EASE_START + (1.0 - EASE_START) * clampf(index / EASE_STAGES, 0.0, 1.0)
+	var t := clampf(index / EASE_STAGES, 0.0, 1.0)
+	return EASE_START + (1.0 - EASE_START) * (t * t * (3.0 - 2.0 * t))
 
 
 ## Esquiva dos inimigos: nenhuma até a fase 5; depois cresce devagar (5% do valor cheio por fase) e
@@ -265,3 +266,46 @@ static func enemy_dodge(base_dodge: float, index: int) -> float:
 		return 0.0
 	var ramp := clampf((number - DODGE_FROM_STAGE + 1) * DODGE_RAMP_PER_STAGE, 0.0, 1.0)
 	return minf(base_dodge * ramp, DODGE_CAP)
+
+
+## Crescimento tardio: depois da fase 9 os monstros ganham força em escala (juros compostos) além do aumento
+## por fase, para o fim do jogo continuar exigindo equipamento e nível. Vida +5% e dano +3,5% por fase.
+const LATE_FROM := 9
+const LATE_HP := 1.05
+const LATE_DAMAGE := 1.035
+
+
+static func late_hp(index: int) -> float:
+	return pow(LATE_HP, maxf(index - LATE_FROM, 0.0))
+
+
+static func late_dmg(index: int) -> float:
+	return pow(LATE_DAMAGE, maxf(index - LATE_FROM, 0.0))
+
+
+## Evolução dos monstros: a cada 10 fases (um cenário novo) eles "evoluem" um degrau: ficam maiores,
+## mais rápidos e ganham a marca de evolução (ver Enemy.evolution_tier).
+const TIER_SIZE := 0.05
+const TIER_SPEED := 0.03
+const MAX_TIER := 8
+
+
+static func tier_of(index: int) -> int:
+	return mini(maxi(index, 0) / Biomes.STAGES_PER_BIOME, MAX_TIER)
+
+
+## Força que um herói "normal" tem na fase de índice `index`: a vida e o dano de um herói que só evoluiu
+## o esperado. É a referência da escala adaptativa.
+static func expected_power(index: int) -> float:
+	return 1.0 + 0.45 * maxi(index, 0)
+
+
+## Escala adaptativa: quanto mais forte o herói está acima do esperado para a fase, mais os monstros
+## ganham de vida e dano (nunca menos que o normal). O expoente 0,5 faz o jogo acompanhar o herói sem
+## anular o que ele conquistou.
+const ADAPT_EXPONENT := 0.5
+const ADAPT_MAX := 5.0
+
+
+static func adaptive_scale(player_power: float, index: int) -> float:
+	return clampf(pow(maxf(player_power, 0.01) / expected_power(index), ADAPT_EXPONENT), 1.0, ADAPT_MAX)

@@ -76,6 +76,8 @@ const RUNE_CHANCE := 0.012
 var world: Node2D
 var ground: GroundLayer
 var decor: WorldDecor
+## Cenário da fase (ver Biomes): floresta, deserto, neve, vulcão, pântano ou cripta.
+var biome: Dictionary
 var player: Player
 var weapon: Weapon
 var joystick: TouchJoystick
@@ -175,7 +177,8 @@ func _ready() -> void:
 	world = Node2D.new()
 	# Ordena por Y: o herói e os inimigos passam na frente ou atrás das árvores.
 	world.y_sort_enabled = true
-	world.modulate = stage["tint"]
+	biome = Biomes.for_stage(stage_index)
+	world.modulate = stage["tint"] if Session.pvp else (stage["tint"] as Color) * (biome["tint"] as Color)
 	add_child(world)
 	if Session.pvp:
 		# Arena PvP: o cenário é um coliseu (piso de areia, muro, arquibancadas), sem grama nem árvores.
@@ -185,6 +188,7 @@ func _ready() -> void:
 	else:
 		world.add_child(MapBorder.new())
 		ground = GroundLayer.new()
+		ground.texture = Biomes.ground_texture(biome)
 		world.add_child(ground)
 
 	player = Player.new()
@@ -198,6 +202,7 @@ func _ready() -> void:
 	if not Session.pvp:
 		decor = WorldDecor.new()
 		decor.world = world
+		decor.biome = biome
 		decor.follow = player
 		add_child(decor)
 
@@ -230,7 +235,7 @@ func _ready() -> void:
 	EventBus.impact.connect(_on_impact)
 	player.hit_taken.connect(_on_player_hit)
 	player.dodged.connect(func() -> void: _on_damage_dealt(0.0, player.global_position + Vector2(0, -20), "dodge"))
-	_toast("%s" % mission_name, Brand.GOLD)
+	_toast(mission_name if Session.pvp or biome["id"] == "forest" else "%s · %s" % [mission_name, biome["name"]], Brand.GOLD)
 
 	_on_player_health_changed(player.health, player.max_health)
 	upgrades = _build_upgrades()
@@ -690,10 +695,24 @@ func _separate_enemies() -> void:
 					other.position += direction * push * 2.0 * (1.0 - share_a)
 
 
+## A força do herói contra o que seria "normal" na fase (vida e dano de quem só evoluiu o esperado = 1).
+func player_power() -> float:
+	var hero_health := float(player.hero["health"])
+	return (player.max_health / maxf(hero_health, 1.0)) * player.get_damage_mult() * player.get_attack_speed_mult()
+
+
+## Escala adaptativa dos monstros: sobe quando o herói está bem acima do esperado para a fase.
+func adaptive_scale() -> float:
+	return Stages.adaptive_scale(player_power(), stage_index)
+
+
 func _spawn_one(kind: String, at: Vector2) -> Enemy:
 	var enemy := Enemy.new()
 	enemy.target = player
-	enemy.setup(kind, elapsed, Stages.hp_scale(stage, elapsed), Stages.damage_scale(stage, elapsed))
+	var adapt := adaptive_scale()
+	enemy.setup(kind, elapsed, Stages.hp_scale(stage, elapsed) * adapt, Stages.damage_scale(stage, elapsed) * sqrt(adapt))
+	enemy.evolve(Stages.tier_of(stage_index))
+
 	enemy.defense = (ENEMY_BASE_DEFENSE + stage_index * ENEMY_DEFENSE_PER_STAGE) * Stages.easiness(stage_index)
 	enemy.dodge_chance = Stages.enemy_dodge(enemy.dodge_chance, stage_index)
 	world.add_child(enemy)
@@ -1508,23 +1527,26 @@ func _build_hud() -> void:
 	hud.add_child(quick_bar)
 	quick_bar.bind(player.inventory)
 	quick_bar.consumable_requested.connect(_use_consumable)
-	bag_button = Brand.make_wood_button("Mochila", Vector2(124, 52), 17)
+	bag_button = Brand.make_wood_button("Mochila", Vector2(140, 52), 17)
+	Brand.with_icon(bag_button, "bag", 26)
 	bag_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	bag_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	bag_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	bag_button.offset_bottom = -14.0
 	bag_button.pressed.connect(toggle_inventory)
 	hud.add_child(bag_button)
-	drop_button = Brand.make_wood_button("Drop", Vector2(100, 52), 17)
+	drop_button = Brand.make_wood_button("Drop", Vector2(112, 52), 17)
+	Brand.with_icon(drop_button, "drop", 22)
 	drop_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	drop_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	drop_button.offset_left = -(62.0 + 10.0 + 100.0)
-	drop_button.offset_right = -(62.0 + 10.0)
+	drop_button.offset_left = -(70.0 + 10.0 + 112.0)
+	drop_button.offset_right = -(70.0 + 10.0)
 	drop_button.offset_bottom = -14.0
 	drop_button.pressed.connect(open_drop_panel)
 	hud.add_child(drop_button)
 
-	pause_button = Brand.make_wood_button("II", Vector2(52, 44), 18)
+	pause_button = Brand.make_wood_button("", Vector2(52, 44), 18)
+	Brand.with_icon(pause_button, "pause", 24)
 	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	pause_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	pause_button.offset_top = 12.0

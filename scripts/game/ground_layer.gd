@@ -10,11 +10,13 @@ const HALF_TILES_X := 7
 const HALF_TILES_Y := 6
 
 var follow: Node2D
+## Textura do chão (a do cenário da fase); vazia = a grama original.
+var texture: Texture2D
 var _texture: Texture2D
 
 
 func _ready() -> void:
-	_texture = load("res://assets/world/grass.png")
+	_texture = texture if texture != null else load("res://assets/world/grass.png")
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	z_index = -100
 	queue_redraw()

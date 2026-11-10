@@ -78,6 +78,7 @@ func _ready() -> void:
 	buttons.add_theme_constant_override("separation", 20)
 	column.add_child(buttons)
 	var back := Brand.make_button("Voltar", Vector2(200, 56))
+	Brand.with_icon(back, "arrow_left", 26)
 	back.pressed.connect(func() -> void: get_tree().change_scene_to_file(MENU_SCENE))
 	buttons.add_child(back)
 	_start_button = Brand.make_button("Ir ao castelo", Vector2(440, 56))

@@ -14,13 +14,8 @@ class GearButton extends Button:
 		custom_minimum_size = Vector2(48, 48)
 
 	func _draw() -> void:
-		var center := size * 0.5
-		var color := Brand.BRASS
-		for i in 8:
-			var direction := Vector2.from_angle(TAU * i / 8.0)
-			draw_line(center + direction * 9.0, center + direction * 15.0, color, 5.0)
-		draw_circle(center, 11.0, color)
-		draw_circle(center, 4.5, Brand.LEATHER)
+		# Cadeado: é a área do administrador (a engrenagem fica no botão Opções).
+		draw_texture_rect(Brand.icon("lock"), Rect2(size * 0.5 - Vector2(14, 14), Vector2(28, 28)), false)
 
 
 var _gear_button: Button
@@ -89,6 +84,7 @@ func _ready() -> void:
 	# Jogar em destaque e, abaixo, os atalhos: castelo, heróis e catálogo de monstros.
 	var play := Brand.make_button("JOGAR", Vector2(420, 76))
 	play.add_theme_font_size_override("font_size", 34)
+	Brand.with_icon(play, "play", 40)
 	play.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	play.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
 	column.add_child(play)
@@ -99,15 +95,19 @@ func _ready() -> void:
 	shortcuts.add_theme_constant_override("separation", 10)
 	column.add_child(shortcuts)
 	var castle_button := Brand.make_wood_button("Castelo", Vector2(136, 50), 20)
+	Brand.with_icon(castle_button, "castle", 24)
 	castle_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(CASTLE_SCENE))
 	shortcuts.add_child(castle_button)
 	var heroes_button := Brand.make_wood_button("Heróis", Vector2(136, 50), 20)
+	Brand.with_icon(heroes_button, "hero", 24)
 	heroes_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(SELECT_SCENE))
 	shortcuts.add_child(heroes_button)
 	var bestiary_button := Brand.make_wood_button("Bestiário", Vector2(136, 50), 20)
+	Brand.with_icon(bestiary_button, "book", 24)
 	bestiary_button.pressed.connect(open_bestiary)
 	shortcuts.add_child(bestiary_button)
 	var arena_button := Brand.make_wood_button("Arena PvP", Vector2(136, 50), 20)
+	Brand.with_icon(arena_button, "swords", 24)
 	arena_button.pressed.connect(open_arena)
 	shortcuts.add_child(arena_button)
 
@@ -191,7 +191,11 @@ func _build_top_bar() -> void:
 	var gold_panel := Brand.make_wood_panel(8)
 	gold_panel.position = Vector2(20, 18)
 	_gold_label = Brand.make_label("Ouro  %d" % Session.inventory.gold, 20, Brand.GOLD)
-	gold_panel.add_child(_gold_label)
+	var gold_row := HBoxContainer.new()
+	gold_row.add_theme_constant_override("separation", 6)
+	gold_row.add_child(Brand.icon_rect("coin", 26))
+	gold_row.add_child(_gold_label)
+	gold_panel.add_child(gold_row)
 	add_child(gold_panel)
 
 	var options := Brand.make_wood_button("Opções", Vector2(120, 48), 20)
@@ -200,6 +204,7 @@ func _build_top_bar() -> void:
 	options.offset_right = -20.0
 	options.offset_top = 18.0
 	options.offset_bottom = 66.0
+	Brand.with_icon(options, "gear", 22)
 	options.pressed.connect(open_settings)
 	add_child(options)
 	_options_button = options

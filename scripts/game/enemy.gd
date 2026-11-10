@@ -58,6 +58,8 @@ const CRIT_KNOCKBACK := 460.0
 const BAR_LIFT := {"bat": 0.9, "brute": 0.6, "necromancer": 0.5, "mushroom": 0.6, "thief": 0.6, "totem": 0.5, "shade": 0.5, "rival": 2.2}
 
 var kind := "slime"
+## Degrau de evolução do monstro (0 nas 10 primeiras fases, +1 a cada 10).
+var evolution_tier := 0
 var speed := 70.0
 var max_health := 20.0
 var contact_damage := 8.0
@@ -177,6 +179,17 @@ func setup(enemy_kind: String, elapsed: float, hp_scale := -1.0, dmg_scale := -1
 	if kind == "mimic":
 		treasure = 2
 		_mimic_sleep = 25.0
+
+
+## Evolução do monstro (a cada 10 fases): maior, mais rápido, um pouco mais claro e com chevrons dourados
+## ao lado da barra de vida (um por degrau, até 5).
+func evolve(tier: int) -> void:
+	evolution_tier = maxi(tier, 0)
+	if evolution_tier <= 0:
+		return
+	radius *= 1.0 + Stages.TIER_SIZE * evolution_tier
+	speed *= 1.0 + Stages.TIER_SPEED * evolution_tier
+	color = color.lerp(Color("ffd36b"), minf(0.07 * evolution_tier, 0.35))
 
 
 ## Vira elite (mais forte, dourado, solta tesouro) ou chefe (enorme, com golpe em área e muito tesouro).
@@ -1374,6 +1387,9 @@ func _draw_health_bar() -> void:
 	draw_rect(Rect2(-width * 0.5 - 1.0, top - 1.0, width + 2.0, 6.0), Brand.NIGHT)
 	draw_rect(Rect2(-width * 0.5, top, width, 4.0), Color("4a1f1f"))
 	draw_rect(Rect2(-width * 0.5, top, width * ratio, 4.0), Color("e0452d").lerp(Color("7bd389"), ratio))
+	for i in mini(evolution_tier, 5):
+		var cx := -width * 0.5 + 5.0 + i * 8.0
+		draw_colored_polygon(PackedVector2Array([Vector2(cx - 3.5, top - 3.0), Vector2(cx, top - 8.0), Vector2(cx + 3.5, top - 3.0), Vector2(cx, top - 5.0)]), Color("ffd36b"))
 
 
 # --- Efeitos recebidos e morte ----------------------------------------------

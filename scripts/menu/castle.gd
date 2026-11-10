@@ -17,13 +17,13 @@ const SIDE_WIDTH := 316.0
 ## Largura da caixa de atributos do herói (o menu da direita começa logo depois dela).
 const STATS_WIDTH := 212.0
 const MENU_ENTRIES := [
-	{"id": "market", "name": "Mercado"},
-	{"id": "skills", "name": "Habilidades"},
-	{"id": "pets", "name": "Pets"},
-	{"id": "forge", "name": "Ferreiro"},
-	{"id": "runes", "name": "Runas"},
-	{"id": "bestiary", "name": "Catálogo"},
-	{"id": "diamonds", "name": "Diamantes"},
+	{"id": "market", "name": "Mercado", "icon": "bag"},
+	{"id": "skills", "name": "Habilidades", "icon": "star"},
+	{"id": "pets", "name": "Pets", "icon": "paw"},
+	{"id": "forge", "name": "Ferreiro", "icon": "anvil"},
+	{"id": "runes", "name": "Runas", "icon": "rune"},
+	{"id": "bestiary", "name": "Catálogo", "icon": "book"},
+	{"id": "diamonds", "name": "Diamantes", "icon": "diamond"},
 ]
 
 var category := "potions"
@@ -239,7 +239,8 @@ func _build_bars() -> void:
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 14)
 	top.add_child(top_row)
-	var back := Brand.make_wood_button("‹ Menu", Vector2(110, 38), 18)
+	var back := Brand.make_wood_button("Menu", Vector2(120, 38), 18)
+	Brand.with_icon(back, "arrow_left", 20)
 	back.pressed.connect(func() -> void: _leave(MENU_SCENE))
 	top_row.add_child(back)
 	top_row.add_child(Brand.make_label("CASTELO", 26, Brand.GOLD))
@@ -249,10 +250,12 @@ func _build_bars() -> void:
 	_top_hero = Brand.make_label("", 18, Brand.PARCHMENT)
 	top_row.add_child(_top_hero)
 	# Saldo de diamantes: tocar abre a loja premium.
-	_top_diamonds = Brand.make_wood_button("", Vector2(190, 38), 17)
+	_top_diamonds = Brand.make_wood_button("", Vector2(200, 38), 17)
+	Brand.with_icon(_top_diamonds, "diamond", 22)
 	_top_diamonds.add_theme_color_override("font_color", Color("7ad0ff"))
 	_top_diamonds.pressed.connect(show_menu.bind("diamonds"))
 	top_row.add_child(_top_diamonds)
+	top_row.add_child(Brand.icon_rect("coin", 26))
 	_top_gold = Brand.make_label("", 20, Brand.GOLD)
 	top_row.add_child(_top_gold)
 
@@ -264,18 +267,21 @@ func _build_bars() -> void:
 	bottom_row.add_theme_constant_override("separation", 16)
 	bottom.add_child(bottom_row)
 	# Trocar de herói fica no canto esquerdo da barra de baixo.
-	var swap_button := Brand.make_wood_button("Trocar de herói", Vector2(190, 56), 18)
+	var swap_button := Brand.make_wood_button("Trocar de herói", Vector2(210, 56), 18)
+	Brand.with_icon(swap_button, "hero", 28)
 	swap_button.pressed.connect(func() -> void: _leave(SELECT_SCENE))
 	bottom_row.add_child(swap_button)
 	_next_label = Brand.make_label("", 18, Brand.PARCHMENT)
 	_next_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom_row.add_child(_next_label)
-	var arena_button := Brand.make_wood_button("ARENA PvP", Vector2(190, 56), 20)
+	var arena_button := Brand.make_wood_button("ARENA PvP", Vector2(200, 56), 20)
+	Brand.with_icon(arena_button, "swords", 28)
 	arena_button.pressed.connect(open_arena_popup)
 	bottom_row.add_child(arena_button)
 	# Na tela só fica o botão: ele abre a janela de escolha da missão.
 	_go_button = Brand.make_wood_button("PARTIR PARA A MISSÃO", Vector2(380, 56), 24)
+	Brand.with_icon(_go_button, "play", 30)
 	_go_button.pressed.connect(open_mission_popup)
 	_style_go_button(_go_button)
 	bottom_row.add_child(_go_button)
@@ -481,6 +487,7 @@ func _build_shop_panel() -> void:
 	for entry in MENU_ENTRIES:
 		var tab := Brand.make_wood_button(entry["name"], Vector2(RAIL_WIDTH, 56), 17)
 		tab.toggle_mode = true
+		Brand.with_icon(tab, String(entry["icon"]), 26)
 		tab.pressed.connect(_on_tab_pressed.bind(entry["id"]))
 		_menu_buttons[entry["id"]] = tab
 		_shortcuts.add_child(tab)
@@ -876,7 +883,7 @@ func _refresh_stage() -> void:
 	var index := Session.stage_index
 	var stage := Stages.get_stage(index)
 	var unlocked := Session.is_stage_unlocked(index)
-	_stage_number.text = ("FASE %d" % (index + 1)) + (" · CHEFE" if Stages.is_boss_stage(stage) else "")
+	_stage_number.text = ("FASE %d" % (index + 1)) + (" · CHEFE" if Stages.is_boss_stage(stage) else "") + ("" if Biomes.index_for_stage(index) == 0 else " · " + String(Biomes.for_stage(index)["name"]))
 	_stage_label.text = stage["name"]
 	_previous_stage.disabled = index <= 0
 	_next_stage.disabled = index >= Session.highest_unlocked() + 1

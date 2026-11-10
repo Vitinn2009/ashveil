@@ -106,6 +106,7 @@ func _run() -> void:
 	await _test_new_skills_and_dodge()
 	await _test_admin_attributes_and_arena()
 	await _test_premium_shop()
+	await _test_biomes_progression_and_icons()
 	await _test_totem()
 	await _test_vortex()
 	await _test_mimic()
@@ -658,7 +659,7 @@ func _test_new_enemies_and_insane() -> void:
 	_check(Updater.state == "current", "release mais antiga: já está na versão mais nova")
 	Updater.apply_release({"tag_name": "", "assets": []})
 	_check(Updater.state == "error", "release sem nome vira erro")
-	_check(Updater.VERSION == "0.38.0", "a versão do jogo é a do export")
+	_check(Updater.VERSION == "0.39.0", "a versão do jogo é a do export")
 	Updater.state = "idle"
 	var menu: Node = load("res://scenes/Main.tscn").instantiate()
 	add_child(menu)
@@ -1219,6 +1220,99 @@ func _test_premium_shop() -> void:
 	Tuning.unlocked = false
 	Tuning.reset_all()
 	Session.reset_progress()
+	await _frames(2)
+
+func _test_biomes_progression_and_icons() -> void:
+	print("[cenários, progressão dos monstros e ícones]")
+	# Cenários: floresta nas fases 1-10 e os 5 novos nas seguintes, em ordem, voltando ao começo depois.
+	_check(Biomes.LIST.size() == 6 and Biomes.for_stage(0)["id"] == "forest" and Biomes.for_stage(9)["id"] == "forest", "as 10 primeiras fases são na floresta")
+	var order := ["desert", "snow", "volcano", "swamp", "crypt"]
+	for i in order.size():
+		var first: int = 10 + 10 * i
+		_check(Biomes.for_stage(first)["id"] == order[i] and Biomes.for_stage(first + 9)["id"] == order[i] and Biomes.for_stage(first - 1)["id"] != order[i], "fases %d a %d: %s" % [first + 1, first + 10, order[i]])
+	_check(Biomes.for_stage(60)["id"] == "forest" and Biomes.for_stage(70)["id"] == "desert", "depois da cripta a ordem recomeça")
+	for i in range(1, Biomes.LIST.size()):
+		var biome: Dictionary = Biomes.LIST[i]
+		var ground := Biomes.ground_texture(biome)
+		_check(ground != null and ground.get_width() == 256, "%s: o chão é gerado" % biome["name"])
+		for kind in Biomes.decor_textures_needed(biome):
+			var texture := Biomes.decor_texture(kind)
+			_check(texture != null and texture.get_width() > 8, "%s: o objeto %s é desenhado" % [biome["name"], kind])
+	# O chão e os objetos entram numa partida de cada cenário.
+	for stage_number in [11, 21, 31, 41, 51]:
+		Session.reset_progress()
+		Session.hero_id = "warrior"
+		Session.stage_index = stage_number - 1
+		var game: Node = load("res://scenes/Game.tscn").instantiate()
+		add_child(game)
+		await _frames(4)
+		var expected: String = Biomes.for_stage(stage_number - 1)["id"]
+		_check(game.biome["id"] == expected and game.decor.biome["id"] == expected, "a fase %d usa o cenário %s" % [stage_number, expected])
+		_check(game.decor.decor_count() > 4, "fase %d: o cenário tem objetos (%d)" % [stage_number, game.decor.decor_count()])
+		var plan: Array = game.decor.plan_chunk(Vector2i(2, 3))
+		var known := true
+		for entry in plan:
+			if not game.decor._textures.has(entry["kind"]):
+				known = false
+		_check(plan.size() > 3 and known, "fase %d: todo objeto sorteado tem textura" % stage_number)
+		game.queue_free()
+		await _frames(2)
+	Session.stage_index = 0
+	# Progressão: começo mais fácil, fim mais difícil.
+	_check(Stages.easiness(0) <= 0.27 and is_equal_approx(Stages.easiness(14), 1.0) and Stages.easiness(3) < 0.4, "o começo é bem mais fácil (fase 1 vale %d%%)" % int(Stages.easiness(0) * 100.0))
+	var early := Stages.hp_scale(Stages.get_stage(2), 60.0)
+	_check(early < 2.5, "a fase 3 no meio do tempo tem monstros mansos (%.2fx)" % early)
+	_check(Stages.late_hp(8) == 1.0 and Stages.late_hp(29) > 2.5 and Stages.late_dmg(29) > 1.8, "depois da fase 9 a vida e o dano dos monstros crescem em escala")
+	var s20 := Stages.hp_scale(Stages.get_stage(19), 60.0)
+	var s40 := Stages.hp_scale(Stages.get_stage(39), 60.0)
+	_check(s40 > s20 * 2.5, "a fase 40 é bem mais dura que a 20 (%.1fx contra %.1fx)" % [s40, s20])
+	# Evolução dos monstros.
+	_check(Stages.tier_of(0) == 0 and Stages.tier_of(9) == 0 and Stages.tier_of(10) == 1 and Stages.tier_of(45) == 4, "o degrau de evolução sobe a cada 10 fases")
+	var plain := Enemy.new()
+	plain.setup("slime", 0.0)
+	var evolved := Enemy.new()
+	evolved.setup("slime", 0.0)
+	evolved.evolve(3)
+	_check(evolved.radius > plain.radius * 1.1 and evolved.speed > plain.speed * 1.08 and evolved.evolution_tier == 3, "monstros evoluídos são maiores e mais rápidos")
+	plain.free()
+	evolved.free()
+	# Escala adaptativa: o herói forte demais enfrenta monstros mais fortes; o normal, o padrão.
+	_check(is_equal_approx(Stages.adaptive_scale(Stages.expected_power(10), 10), 1.0) and Stages.adaptive_scale(0.5, 10) == 1.0, "um herói normal ou fraco enfrenta monstros no valor padrão")
+	_check(Stages.adaptive_scale(Stages.expected_power(10) * 16.0, 10) > 3.5 and Stages.adaptive_scale(1.0e9, 10) <= Stages.ADAPT_MAX, "um herói muito forte enfrenta monstros bem mais fortes, com teto")
+	Session.reset_progress()
+	Session.hero_id = "warrior"
+	Session.stage_index = 4
+	var adaptive_game: Node = load("res://scenes/Game.tscn").instantiate()
+	add_child(adaptive_game)
+	await _frames(4)
+	adaptive_game.weapon.process_mode = Node.PROCESS_MODE_DISABLED
+	var base_enemy: Enemy = adaptive_game._spawn_one("slime", Vector2(300, 0))
+	var normal_health: float = base_enemy.max_health
+	adaptive_game.player.card_health = 600.0
+	adaptive_game.player.refresh_stats()
+	_check(adaptive_game.player_power() > 3.0, "o poder do herói sobe com a vida (%.1f)" % adaptive_game.player_power())
+	var strong_enemy: Enemy = adaptive_game._spawn_one("slime", Vector2(-300, 0))
+	_check(strong_enemy.max_health > normal_health * 1.25, "com o herói mais forte, o monstro novo nasce com mais vida (%d contra %d)" % [strong_enemy.max_health, normal_health])
+	adaptive_game.queue_free()
+	await _frames(2)
+	Session.stage_index = 0
+	# Ícones.
+	for icon_name in ["coin", "diamond", "heart", "bolt", "star", "bag", "paw", "anvil", "rune", "book", "gear", "castle", "hero", "swords", "play", "arrow_left", "skull", "lock", "plus", "shield", "flask", "trophy", "crown", "pause", "drop", "sparkle"]:
+		_check(Brand.icon(icon_name) != null, "ícone %s existe" % icon_name)
+	var menu: Node = load("res://scenes/Main.tscn").instantiate()
+	add_child(menu)
+	await _frames(3)
+	_check(menu._play_button.icon != null and menu._options_button.icon != null, "os botões do menu têm ícone")
+	menu.queue_free()
+	var castle: Control = load("res://scenes/Castle.tscn").instantiate()
+	add_child(castle)
+	await _frames(3)
+	var all_icons := true
+	for id in castle._menu_buttons:
+		if castle._menu_buttons[id].icon == null:
+			all_icons = false
+	_check(all_icons and castle._go_button.icon != null and castle._top_diamonds.icon != null, "as abas e os botões do castelo têm ícone")
+	castle.queue_free()
 	await _frames(2)
 
 func _test_totem() -> void:
@@ -2978,7 +3072,7 @@ func _test_infinite_stages() -> void:
 
 func _test_early_ease_and_choices() -> void:
 	print("[começo fácil, upgrades só na partida e forja em tudo]")
-	_check(Stages.easiness(0) < 0.4 and is_equal_approx(Stages.easiness(12), 1.0), "a fase 1 vale ~35%% da força e a 13 já vale 100%% (%.2f)" % Stages.easiness(0))
+	_check(Stages.easiness(0) < 0.4 and is_equal_approx(Stages.easiness(14), 1.0), "a fase 1 vale ~26%% da força e a 15 já vale 100%% (%.2f)" % Stages.easiness(0))
 	_check(Stages.hp_scale(Stages.get_stage(0), 0.0) < Stages.hp_scale(Stages.get_stage(12), 0.0) * 0.3, "os monstros da fase 1 têm bem menos vida que os da 13")
 	_check(Stages.damage_scale(Stages.get_stage(0), 0.0) < Stages.damage_scale(Stages.get_stage(12), 0.0) * 0.4, "e batem bem mais fraco")
 	_check(Stages.max_enemies(Stages.get_stage(0), 60.0) < Stages.max_enemies(Stages.get_stage(12), 60.0), "e há menos deles ao mesmo tempo")
